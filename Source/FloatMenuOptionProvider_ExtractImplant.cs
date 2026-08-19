@@ -111,6 +111,13 @@ public class FloatMenuOptionProvider_ExtractImplant : FloatMenuOptionProvider
             // does not exist yet at that point - so the data cannot live on the driver.
             job.count = implantLoadID;
 
+            // Enemies who die outside the home area leave FORBIDDEN corpses
+            // (Pawn.cs -> corpse.SetForbiddenIfOutsideHomeArea()), which is most raid casualties.
+            // This is an explicit player order, so it ignores that, exactly as vanilla's own
+            // ordered jobs do (FloatMenuOptionProvider_CarryToShuttle, LoadTransportersJobUtility).
+            // ToilFailConditions.FailOnForbidden returns Ongoing when this flag is set.
+            job.ignoreForbidden = true;
+
             surgeon.jobs.TryTakeOrderedJob(job, JobTag.Misc);
         }, implant.def.spawnThingOnRemoved);
 
