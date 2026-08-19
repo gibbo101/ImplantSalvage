@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+
+  <!-- Float menu. {0} is the implant plus the part it sits in, e.g. "Bionic arm (left arm)". -->
+  <Luke_ExtractImplant>Extract {0}</Luke_ExtractImplant>
+  <Luke_ExtractImplantSubmenu>Extract implant...</Luke_ExtractImplantSubmenu>
+  <Luke_ExtractImplantIntact>{0} intact</Luke_ExtractImplantIntact>
+
+  <!-- Disabled-option reasons not already covered by vanilla keys. -->
+  <Luke_ExtractImplantNoManipulation>no manipulation</Luke_ExtractImplantNoManipulation>
+
+  <!-- {0} surgeon, {1} implant, {2} corpse. -->
+  <Luke_ExtractImplantFailed>{0} destroyed {1} while extracting it from {2}.</Luke_ExtractImplantFailed>
+
+  <!-- Mod settings. -->
+  <Luke_ImplantSalvageSettingsMaxDestroy>Maximum destroy chance (unskilled surgeon)</Luke_ImplantSalvageSettingsMaxDestroy>
+  <Luke_ImplantSalvageSettingsMaxDestroyDesc>The chance of wrecking an implant when the surgeon has no medical ability at all. Skill scales the real chance down from here.</Luke_ImplantSalvageSettingsMaxDestroyDesc>
+  <Luke_ImplantSalvageSettingsMinDestroy>Minimum destroy chance (master surgeon)</Luke_ImplantSalvageSettingsMinDestroy>
+  <Luke_ImplantSalvageSettingsMinDestroyDesc>The floor no amount of skill can go below, mirroring vanilla surgery always carrying some risk. Set to 0% to make expert extraction perfectly safe.</Luke_ImplantSalvageSettingsMinDestroyDesc>
+  <Luke_ImplantSalvageSettingsShowChance>Show the intact chance in the right-click menu</Luke_ImplantSalvageSettingsShowChance>
+
+</LanguageData>
