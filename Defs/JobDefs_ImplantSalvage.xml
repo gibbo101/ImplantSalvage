@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <JobDef>
+    <defName>Luke_ExtractImplant</defName>
+    <driverClass>ImplantSalvage.JobDriver_ExtractImplant</driverClass>
+    <reportString>extracting implant from TargetA.</reportString>
+    <!-- Never picked up opportunistically en route to something else: every extraction is
+         an explicit player order (see the one-implant-per-order rule in the design doc). -->
+    <allowOpportunisticPrefix>false</allowOpportunisticPrefix>
+    <casualInterruptible>true</casualInterruptible>
+  </JobDef>
+
+</Defs>
