@@ -23,7 +23,12 @@ namespace ImplantSalvage;
 /// </summary>
 public class FloatMenuOptionProvider_ExtractImplant : FloatMenuOptionProvider
 {
-    protected override bool Drafted => false;
+    // Available drafted as well as undrafted. Pulling a bionic off a body mid-fight, or on a
+    // squad staged away from base, is exactly when you want it - and making the player undraft
+    // first is pure friction. A drafted pawn runs the job because TryTakeOrderedJob marks it
+    // playerForced, the same way vanilla's drafted tend/repair orders work, and stays drafted
+    // afterwards.
+    protected override bool Drafted => true;
 
     protected override bool Undrafted => true;
 
