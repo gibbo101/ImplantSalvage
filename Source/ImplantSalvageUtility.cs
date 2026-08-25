@@ -16,6 +16,8 @@ public static class ImplantSalvageUtility
     private const int MinWorkTicks = 600;
     private const int MaxWorkTicks = 2000;
 
+    private static List<ThingDef> implantProductsCache;
+
     /// <summary>
     /// Implants that can be pulled out of a corpse.
     ///
@@ -50,6 +52,102 @@ public static class ImplantSalvageUtility
                 yield return hediff;
             }
         }
+    }
+
+    /// <summary>
+    /// Every implant any loaded mod defines, most valuable first, deduplicated.
+    ///
+    /// Derived from HediffDef.spawnThingOnRemoved - the same one-field test ExtractableImplants
+    /// uses - so a bionics mod's parts appear here with no support code and no per-mod patch.
+    /// Cached: the def database does not change after startup.
+    ///
+    /// UI only (the settings list). Never call this to drive game state.
+    /// </summary>
+    public static List<ThingDef> AllImplantProducts()
+    {
+        if (implantProductsCache != null)
+        {
+            return implantProductsCache;
+        }
+
+        HashSet<ThingDef> seen = new HashSet<ThingDef>();
+        List<ThingDef> products = new List<ThingDef>();
+
+        List<HediffDef> hediffDefs = DefDatabase<HediffDef>.AllDefsListForReading;
+        for (int i = 0; i < hediffDefs.Count; i++)
+        {
+            ThingDef product = hediffDefs[i].spawnThingOnRemoved;
+            if (product != null && seen.Add(product))
+            {
+                products.Add(product);
+            }
+        }
+
+        // Value order puts the decision the player actually cares about at the top - archotech and
+        // bionics first, peg legs and dentures last. defName breaks ties so the list never shuffles.
+        products.Sort(delegate(ThingDef a, ThingDef b)
+        {
+            int byValue = b.BaseMarketValue.CompareTo(a.BaseMarketValue);
+            return byValue != 0 ? byValue : string.CompareOrdinal(a.defName, b.defName);
+        });
+
+        implantProductsCache = products;
+        return products;
+    }
+
+    /// <summary>
+    /// The subset of <see cref="ExtractableImplants"/> the player still wants salvaged, per the
+    /// per-implant settings list ("prosthetic legs no, bionic legs yes").
+    ///
+    /// This governs the corpse marker and the storage/bill filters - the automated, at-a-glance
+    /// paths. It deliberately does NOT govern the right-click menu: an explicit player order stays
+    /// complete, because switching an implant off means "stop nagging me about it", not "make it
+    /// impossible to ever take".
+    /// </summary>
+    public static IEnumerable<Hediff> SalvageableImplants(Corpse corpse)
+    {
+        foreach (Hediff hediff in ExtractableImplants(corpse))
+        {
+            // Null-safe on purpose: the storage filters are reachable from other mods' code, and a
+            // missing settings object should mean "salvage everything", never a crash mid-haul.
+            if (ImplantSalvageMod.Settings?.ImplantIsWanted(hediff.def.spawnThingOnRemoved) ?? true)
+            {
+                yield return hediff;
+            }
+        }
+    }
+
+    /// <summary>Cheap early-exit test for the storage filters, which are called on every haul scan.</summary>
+    public static bool HasSalvageableImplant(Corpse corpse)
+    {
+        foreach (Hediff _ in SalvageableImplants(corpse))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// The most valuable wanted implant in a corpse, or null. One marker per corpse showing the
+    /// best thing in it beats burying the body under one icon per implant.
+    /// </summary>
+    public static ThingDef BestSalvageProduct(Corpse corpse)
+    {
+        ThingDef best = null;
+        float bestValue = -1f;
+
+        foreach (Hediff hediff in SalvageableImplants(corpse))
+        {
+            ThingDef product = hediff.def.spawnThingOnRemoved;
+            if (product != null && product.BaseMarketValue > bestValue)
+            {
+                best = product;
+                bestValue = product.BaseMarketValue;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>

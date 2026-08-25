@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- Storage settings and bill ingredient filters share the same ThingFilter UI, so this one pair
+       of filters shows up in stockpile zones, crematorium bills and butcher bills alike.
+
+       Both are allowedByDefault so installing the mod changes nothing about existing stockpiles or
+       bills. Parented at Corpses rather than CorpsesHumanlike to stay race-agnostic, matching the
+       extraction filter itself - modded animal and alien prosthetics count too. -->
+
+  <SpecialThingFilterDef>
+    <defName>Luke_AllowCorpsesWithImplants</defName>
+    <label>allow corpses with implants</label>
+    <description>Allow dead bodies that still hold an implant worth salvaging. Untick this on a crematorium or butcher table bill to stop it destroying bionics, or on a stockpile to keep implanted bodies out of it. Only implants ticked in the Implant Salvage mod settings count.</description>
+    <parentCategory>Corpses</parentCategory>
+    <allowedByDefault>true</allowedByDefault>
+    <saveKey>lukeAllowCorpsesWithImplants</saveKey>
+    <workerClass>ImplantSalvage.SpecialThingFilterWorker_CorpsesWithImplants</workerClass>
+  </SpecialThingFilterDef>
+
+  <SpecialThingFilterDef>
+    <defName>Luke_AllowCorpsesNoImplants</defName>
+    <label>allow corpses without implants</label>
+    <description>Allow dead bodies with nothing left worth pulling out. Untick this on a stockpile to make it a salvage pile that only accepts bodies still carrying an implant.</description>
+    <parentCategory>Corpses</parentCategory>
+    <allowedByDefault>true</allowedByDefault>
+    <saveKey>lukeAllowCorpsesNoImplants</saveKey>
+    <workerClass>ImplantSalvage.SpecialThingFilterWorker_CorpsesNoImplants</workerClass>
+  </SpecialThingFilterDef>
+
+</Defs>
