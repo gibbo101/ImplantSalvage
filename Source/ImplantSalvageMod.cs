@@ -1,10 +1,19 @@
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 using Verse;
 
 namespace ImplantSalvage;
 
+/// <summary>
+/// Presentation options only.
+///
+/// There is deliberately no global "implants worth salvaging" list here. Which implants matter is a
+/// per-stockpile decision, made in the Storage tab's implant picker, because one global answer is
+/// useless the moment a colony wants a bionics pile and a scrap pile at the same time.
+///
+/// The two destroy-chance values are not preferences either - they are simulation rules that feed a
+/// Rand roll, so while a game is loaded they live in the save (see GameComponent_ImplantSalvage) and
+/// what is stored here is only the starting point a *new* game copies.
+/// </summary>
 public class ImplantSalvageSettings : ModSettings
 {
     /// <summary>Destroy chance for a surgeon with no medical ability whatsoever.</summary>
@@ -16,72 +25,11 @@ public class ImplantSalvageSettings : ModSettings
     public bool showIntactChance = true;
 
     /// <summary>
-    /// Draw a marker over corpses holding a salvageable implant. Off by default: it is an extra
-    /// layer of icons on an already busy map, so the player opts into it.
+    /// Draw a marker over corpses that still hold an implant. On by default: shipped off, it was
+    /// invisible until someone went looking in the settings menu, and a feature nobody finds is
+    /// worse than one they switch off.
     /// </summary>
-    public bool showCorpseMarker;
-
-    /// <summary>
-    /// Implants the player has decided are not worth salvaging, by ThingDef defName - e.g. switch
-    /// off prosthetic legs while leaving bionic legs on.
-    ///
-    /// Stored as *exclusions* rather than as an allow-list on purpose. A newly installed mod's
-    /// implants are therefore salvage-worthy by default rather than silently switched off, which
-    /// is what someone adding a bionics mod expects.
-    ///
-    /// Stored as raw strings rather than as a ThingFilter or a List of ThingDef because
-    /// ModSettings are loaded by GetSettings in the Mod constructor, which runs before the
-    /// DefDatabase is populated - any Def-mode scribe here would resolve to null. It also means
-    /// uninstalling the mod an implant came from degrades quietly: the defName stops matching
-    /// anything and everything else still works.
-    /// </summary>
-    public List<string> disallowedImplants = new List<string>();
-
-    [Unsaved(false)]
-    private HashSet<string> disallowedLookup;
-
-    private HashSet<string> DisallowedLookup
-    {
-        get
-        {
-            if (disallowedLookup == null)
-            {
-                disallowedLookup = new HashSet<string>(disallowedImplants ?? new List<string>());
-            }
-
-            return disallowedLookup;
-        }
-    }
-
-    /// <summary>
-    /// Whether this implant is one the player still wants salvaged. Drives the corpse marker and
-    /// the storage/bill filters; deliberately does NOT hide right-click options (see the float
-    /// menu provider).
-    /// </summary>
-    public bool ImplantIsWanted(ThingDef product)
-    {
-        return product != null && !DisallowedLookup.Contains(product.defName);
-    }
-
-    public void SetImplantWanted(ThingDef product, bool wanted)
-    {
-        if (product == null)
-        {
-            return;
-        }
-
-        disallowedImplants ??= new List<string>();
-
-        if (wanted)
-        {
-            disallowedImplants.Remove(product.defName);
-            DisallowedLookup.Remove(product.defName);
-        }
-        else if (DisallowedLookup.Add(product.defName))
-        {
-            disallowedImplants.Add(product.defName);
-        }
-    }
+    public bool showCorpseMarker = true;
 
     public override void ExposeData()
     {
@@ -89,25 +37,18 @@ public class ImplantSalvageSettings : ModSettings
         Scribe_Values.Look(ref maxDestroyChance, "maxDestroyChance", 0.5f);
         Scribe_Values.Look(ref minDestroyChance, "minDestroyChance", 0.02f);
         Scribe_Values.Look(ref showIntactChance, "showIntactChance", defaultValue: true);
-        Scribe_Values.Look(ref showCorpseMarker, "showCorpseMarker", defaultValue: false);
-        Scribe_Collections.Look(ref disallowedImplants, "disallowedImplants", LookMode.Value);
-
-        if (Scribe.mode == LoadSaveMode.PostLoadInit)
-        {
-            disallowedImplants ??= new List<string>();
-            disallowedLookup = null;
-        }
+        Scribe_Values.Look(ref showCorpseMarker, "showCorpseMarker", defaultValue: true);
     }
 }
 
 public class ImplantSalvageMod : Mod
 {
-    private const float RowHeight = 28f;
-
-    private static readonly Color DescColor = new Color(0.65f, 0.65f, 0.65f);
-
-    private Vector2 implantScrollPosition;
-    private string implantSearch = "";
+    /// <summary>
+    /// Slider edits made while a game is running, held until the window closes so they can be sent
+    /// as one synced change. Null means "not edited this session" - see WriteSettings.
+    /// </summary>
+    private float? pendingMaxDestroyChance;
+    private float? pendingMinDestroyChance;
 
     public static ImplantSalvageSettings Settings { get; private set; }
 
@@ -118,26 +59,73 @@ public class ImplantSalvageMod : Mod
 
     public override string SettingsCategory() => "Implant Salvage";
 
+    /// <summary>
+    /// Called when the settings window closes. The destroy chances are simulation rules, so an
+    /// in-game edit is pushed through a synced method - one message per edit, rather than one per
+    /// frame while a slider is dragged.
+    ///
+    /// Only an actual edit is pushed. That matters in Multiplayer: a client who merely opens and
+    /// closes this window must not overwrite the host's rules with their own saved defaults.
+    /// </summary>
+    public override void WriteSettings()
+    {
+        base.WriteSettings();
+
+        if (pendingMaxDestroyChance.HasValue && GameComponent_ImplantSalvage.Current != null)
+        {
+            ImplantSalvageActions.SetDestroyChances(
+                pendingMaxDestroyChance.Value,
+                pendingMinDestroyChance ?? Settings.minDestroyChance);
+
+            // Keep the stored copy in step, so the next new game starts from what was last chosen.
+            Settings.maxDestroyChance = pendingMaxDestroyChance.Value;
+            Settings.minDestroyChance = pendingMinDestroyChance ?? Settings.minDestroyChance;
+        }
+
+        pendingMaxDestroyChance = null;
+        pendingMinDestroyChance = null;
+    }
+
     public override void DoSettingsWindowContents(Rect inRect)
     {
-        // Fixed block on top, scrolling implant list underneath. The list can run to hundreds of
-        // rows once bionics mods are installed, so it cannot share the Listing_Standard.
-        Rect topRect = new Rect(inRect.x, inRect.y, inRect.width, 268f);
-
         Listing_Standard listing = new Listing_Standard();
-        listing.Begin(topRect);
+        listing.Begin(inRect);
+
+        // While a game is loaded these sliders show and edit that game's rules, not the stored
+        // defaults - the rules live in the save so every Multiplayer client reads the same numbers.
+        // From the main menu there is no game, so they edit the defaults a new game will start from.
+        GameComponent_ImplantSalvage rules = GameComponent_ImplantSalvage.Current;
+
+        float maxDestroy = pendingMaxDestroyChance ?? rules?.maxDestroyChance ?? Settings.maxDestroyChance;
+        float minDestroy = pendingMinDestroyChance ?? rules?.minDestroyChance ?? Settings.minDestroyChance;
 
         listing.Label("Luke_ImplantSalvageSettingsMaxDestroy".Translate() + ": " +
-                      Settings.maxDestroyChance.ToStringPercent());
+                      maxDestroy.ToStringPercent());
         listing.Label("Luke_ImplantSalvageSettingsMaxDestroyDesc".Translate(), -1f, null);
-        Settings.maxDestroyChance = listing.Slider(Settings.maxDestroyChance, 0f, 1f);
+        float newMaxDestroy = listing.Slider(maxDestroy, 0f, 1f);
 
         listing.Gap();
 
         listing.Label("Luke_ImplantSalvageSettingsMinDestroy".Translate() + ": " +
-                      Settings.minDestroyChance.ToStringPercent());
+                      minDestroy.ToStringPercent());
         listing.Label("Luke_ImplantSalvageSettingsMinDestroyDesc".Translate(), -1f, null);
-        Settings.minDestroyChance = listing.Slider(Settings.minDestroyChance, 0f, 0.25f);
+        float newMinDestroy = listing.Slider(minDestroy, 0f, 0.25f);
+
+        if (rules != null)
+        {
+            // Held rather than applied: a live edit here would be a local mutation of a shared rule,
+            // which is the desync this whole arrangement exists to prevent. WriteSettings sends it.
+            if (newMaxDestroy != maxDestroy || newMinDestroy != minDestroy)
+            {
+                pendingMaxDestroyChance = newMaxDestroy;
+                pendingMinDestroyChance = newMinDestroy;
+            }
+        }
+        else
+        {
+            Settings.maxDestroyChance = newMaxDestroy;
+            Settings.minDestroyChance = newMinDestroy;
+        }
 
         listing.Gap();
 
@@ -150,95 +138,14 @@ public class ImplantSalvageMod : Mod
             "Luke_ImplantSalvageSettingsShowMarkerDesc".Translate());
         Settings.showCorpseMarker = marker;
 
-        listing.End();
+        listing.Gap();
 
-        Rect listRect = new Rect(inRect.x, topRect.yMax + 8f, inRect.width,
-            inRect.height - topRect.height - 8f);
-        DrawImplantList(listRect);
-
-        base.DoSettingsWindowContents(inRect);
-    }
-
-    /// <summary>
-    /// Per-implant opt-out. Every implant any loaded mod defines shows up here automatically: the
-    /// list comes from HediffDef.spawnThingOnRemoved, the same one-field test that decides what is
-    /// extractable at all, so modded bionics need no support code and no per-mod patch.
-    /// </summary>
-    private void DrawImplantList(Rect rect)
-    {
-        List<ThingDef> products = ImplantSalvageUtility.AllImplantProducts();
-
-        Text.Font = GameFont.Small;
-        Widgets.Label(new Rect(rect.x, rect.y, rect.width, 24f),
-            "Luke_ImplantSalvageSettingsImplantList".Translate());
-
-        Rect descRect = new Rect(rect.x, rect.y + 24f, rect.width, 34f);
-        GUI.color = DescColor;
-        Text.Font = GameFont.Tiny;
-        Widgets.Label(descRect, "Luke_ImplantSalvageSettingsImplantListDesc".Translate());
-        Text.Font = GameFont.Small;
+        // Points at where the real per-stockpile choice is made, so nobody goes looking for it here.
+        GUI.color = new Color(0.65f, 0.65f, 0.65f);
+        listing.Label("Luke_ImplantSalvageSettingsPickerHint".Translate());
         GUI.color = Color.white;
 
-        float controlsY = descRect.yMax + 2f;
-        Rect searchRect = new Rect(rect.x, controlsY, Mathf.Max(120f, rect.width - 224f), 28f);
-        implantSearch = Widgets.TextField(searchRect, implantSearch);
-
-        if (Widgets.ButtonText(new Rect(searchRect.xMax + 8f, controlsY, 100f, 28f),
-                "Luke_ImplantSalvageSettingsAll".Translate()))
-        {
-            foreach (ThingDef product in products)
-            {
-                Settings.SetImplantWanted(product, wanted: true);
-            }
-        }
-
-        if (Widgets.ButtonText(new Rect(searchRect.xMax + 116f, controlsY, 100f, 28f),
-                "Luke_ImplantSalvageSettingsNone".Translate()))
-        {
-            foreach (ThingDef product in products)
-            {
-                Settings.SetImplantWanted(product, wanted: false);
-            }
-        }
-
-        List<ThingDef> shown = new List<ThingDef>();
-        foreach (ThingDef product in products)
-        {
-            if (implantSearch.NullOrEmpty() ||
-                product.label.IndexOf(implantSearch, StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                shown.Add(product);
-            }
-        }
-
-        Rect outRect = new Rect(rect.x, controlsY + 34f, rect.width, rect.yMax - controlsY - 34f);
-        Rect viewRect = new Rect(0f, 0f, outRect.width - 20f, shown.Count * RowHeight);
-
-        Widgets.BeginScrollView(outRect, ref implantScrollPosition, viewRect);
-
-        float curY = 0f;
-        foreach (ThingDef product in shown)
-        {
-            Rect row = new Rect(0f, curY, viewRect.width, RowHeight);
-            if (Mouse.IsOver(row))
-            {
-                Widgets.DrawHighlight(row);
-            }
-
-            Widgets.ThingIcon(new Rect(row.x, row.y, RowHeight, RowHeight), product);
-
-            bool wanted = Settings.ImplantIsWanted(product);
-            bool newWanted = wanted;
-            Rect checkRect = new Rect(row.x + RowHeight + 6f, row.y, row.width - RowHeight - 6f, row.height);
-            Widgets.CheckboxLabeled(checkRect, product.LabelCap, ref newWanted);
-            if (newWanted != wanted)
-            {
-                Settings.SetImplantWanted(product, newWanted);
-            }
-
-            curY += RowHeight;
-        }
-
-        Widgets.EndScrollView();
+        listing.End();
+        base.DoSettingsWindowContents(inRect);
     }
 }

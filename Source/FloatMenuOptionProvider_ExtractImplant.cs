@@ -105,25 +105,9 @@ public class FloatMenuOptionProvider_ExtractImplant : FloatMenuOptionProvider
             label += " (" + "Luke_ExtractImplantIntact".Translate(intact.ToStringPercent()) + ")";
         }
 
-        int implantLoadID = implant.loadID;
-
         FloatMenuOption option = new FloatMenuOption(label, delegate
         {
-            Job job = JobMaker.MakeJob(ImplantSalvageDefOf.Luke_ExtractImplant, corpse);
-
-            // Which implant. An int on the Job, because Multiplayer serialises the Job itself
-            // (SyncMethod.Register(...TryTakeOrderedJob).ExposeParameter(0)) and the JobDriver
-            // does not exist yet at that point - so the data cannot live on the driver.
-            job.count = implantLoadID;
-
-            // Enemies who die outside the home area leave FORBIDDEN corpses
-            // (Pawn.cs -> corpse.SetForbiddenIfOutsideHomeArea()), which is most raid casualties.
-            // This is an explicit player order, so it ignores that, exactly as vanilla's own
-            // ordered jobs do (FloatMenuOptionProvider_CarryToShuttle, LoadTransportersJobUtility).
-            // ToilFailConditions.FailOnForbidden returns Ongoing when this flag is set.
-            job.ignoreForbidden = true;
-
-            surgeon.jobs.TryTakeOrderedJob(job, JobTag.Misc);
+            ImplantSalvageUtility.IssueExtractJob(surgeon, corpse, implant);
         }, implant.def.spawnThingOnRemoved);
 
         return FloatMenuUtility.DecoratePrioritizedTask(option, surgeon, new LocalTargetInfo(corpse));

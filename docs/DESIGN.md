@@ -1,6 +1,8 @@
 # Implant Salvage — Design Doc
 
-**Status:** design settled — all questions closed, ready to build
+**Status:** built. Slice 1 shipped 2026-08-19; the 2026-08-25 round added corpse markers, a
+per-stockpile implant picker inside the storage filter tree, and the designation-based gizmo that
+**superseded slice 2** (see §8/§8b). The mod now depends on Harmony and MultiplayerAPI.
 **Decided:** implants only (no natural organs) · failure destroys the implant · **one named
 implant per order, never an "extract all"**, no queueing in v1 · no mood/ideo penalty · distinct
 from vanilla Strip · no rot penalty · two slices — right-click job first, corpse Operations tab
@@ -374,62 +376,67 @@ and loosening a second vanilla gate widens the conflict surface for a rare corps
 
 ---
 
-## 8. Option B — unlock the corpse Operations tab (slice 2, planned)
+## 8. Option B — unlock the corpse Operations tab (slice 2) — **ABANDONED, superseded**
 
-**Promoted from "rejected" after further decompiling.** The original objection — "unlocking the
-tab would expose every surgery recipe on corpses" — is **wrong**. `ThingDefGenerator_Corpses.cs:155`:
+**Status: not built, and will not be. Superseded 2026-08-25 by the designation + WorkGiver model
+(§8b).** Kept here because the reasoning is worth not re-deriving.
+
+The idea was to unlock `ITab_Pawn_Health` on corpses so extractions could be queued as medical
+bills and serviced by the existing `DoBillsMedicalHumanOperation` WorkGiver. It was promoted from
+"rejected" once it turned out `ThingDefGenerator_Corpses.cs:155` gives every non-mech corpse a
+curated one-entry recipe list, so unlocking the tab would *not* expose the whole surgery catalogue.
+
+**Then a second look killed it.** The tab would render, but the Add-bill click is dead on a corpse.
+`HealthCardUtility.GenerateSurgeryOption`'s action opens with:
 
 ```csharp
-thingDef.recipes = new List<RecipeDef>();
-if (!pawnDef.race.IsMechanoid)
-    thingDef.recipes.Add(RecipeDefOf.RemoveBodyPart);
+Pawn medPawn = thingForMedBills as Pawn;
+if (medPawn != null) { ... CreateSurgeryBill(medPawn, recipe, part); }
 ```
 
-Every non-mechanoid corpse ThingDef ships with a **curated one-entry recipe list**, not the full
-surgery catalogue. `ThingDef.AllRecipes` (`Verse/ThingDef.cs:545`) is that list plus anything
-whose `recipeUsers` names the def. So the unlocked tab shows exactly the removal operation and
-whatever we add — no "install bionic arm on a corpse", no "harvest lung", no "euthanize".
-Ludeon curated the corpse recipe list and then left `pawn.Dead` as the only stop sign.
+`thingForMedBills` is the `Corpse`, so `medPawn` is null and the delegate does nothing.
+`CreateSurgeryBill` itself takes a `Pawn` and calls `medPawn.BillStack.AddBill` / `.MapHeld`, so it
+cannot be reused either. Slice 2 would therefore have needed its own recipe-options maker *and* its
+own bill creation — more code and one more patched surface than the original estimate.
 
-**MP status: also free.** `SyncMethods.cs:432` registers `HealthCardUtility.CreateSurgeryBill`,
-and MP's `BillStack` serialiser (`SyncDictRimWorld.cs:284-294`) resolves any `Thing` implementing
-`IBillGiver` to `.BillStack` — `Corpse` qualifies. Corpse bills round-trip unmodified, provided
-bill creation goes through the vanilla `CreateSurgeryBill` path the tab already uses.
+Full cost, had we built it: a destructive `return false` prefix on `ITab_Pawn_Health.FillTab`; a
+custom `Recipe_ExtractImplant : Recipe_Surgery` worker (vanilla `RemoveBodyPart` drops natural
+organs and leaves the hediff intact on failure); recipe registration onto runtime-generated corpse
+ThingDefs; and a replacement for the corpse-hostile click path above.
 
-**What it costs**
+It also had a coverage hole we had agreed to accept: `ShouldAllowOperations` bails on
+`pawn.IsMutant && !mutant.Def.entitledToMedicalCare`, so **shambler and awoken corpses would have
+been blocked** (§7b).
 
-1. **One destructive UI prefix.** `HealthCardUtility.DrawPawnHealthCard` resets `allowOperations`
-   to `false` in a local, unreachable from a prefix. So patch `ITab_Pawn_Health.FillTab` instead:
-   prefix returning `false` *only* when `SelThing is Corpse`, calling the public statics
-   `DrawHealthSummary(rect, pawn, allowOperations: true, SelThing)` + `DrawHediffListing(...)`
-   directly. Gated narrowly, UI-only, no simulation touched — MP-irrelevant. Document the
-   `return false` per the workspace rule on destructive prefixes.
-2. **Our own RecipeDef, not vanilla `RemoveBodyPart`.** Two reasons: it drops natural organs via
-   `SpawnNaturalPartIfClean` (Q1 says implants only), and on a failed roll
-   `Recipe_RemoveBodyPart.ApplyOnPawn` returns early leaving the hediff intact — so the player
-   just re-queues the bill. "Failure destroys" needs a custom `Recipe_ExtractImplant :
-   Recipe_Surgery` worker sharing `ImplantSalvageUtility` with the JobDriver.
-3. **Recipe registration on generated defs.** Corpse ThingDefs are runtime-generated, so XML
-   `recipeUsers` may not cross-reference them. Test `<recipeUsers><li>Corpse_Human</li></recipeUsers>`
-   first (implied defs are added pre-resolve, so it may just work); fall back to injecting into
-   `thingDef.recipes` for `DefDatabase<ThingDef>.AllDefs.Where(d => d.IsCorpse)` in a
-   `[StaticConstructorOnStartup]`, and null `allRecipesCached` after.
+## 8b. What replaced it — designation + WorkGiver
 
-**Slice 2 is the precise picker, not a blanket one.** This matters given the §3 rule against
-"extract all". The corpse Health tab *already renders today* — `ITab_Pawn_Health.PawnForHealth`
-resolves `corpse.InnerPawn` (`RimWorld/ITab_Pawn_Health.cs:18`) and the hediff listing shows every
-installed implant. The player can already sit and read exactly what is in the body; they simply
-cannot act on it. Unlocking operations turns that same list into per-part extract entries, and
-`Bill_Medical.Part` targets one specific `BodyPartRecord` per bill. So slice 2 is *more* granular
-than the float menu, not less — it is the full inventory with a button next to each line.
+Everything slice 2 existed for, at a fraction of the cost:
 
-**Why both slices, not one.** They serve different moments. The float menu is "raid's over, I want
-that archotech arm *now*". The Operations tab is "queue these six specific implants off these
-corpses whenever a doctor is free". Vanilla itself pairs prioritise-by-right-click with work
-priorities. Slice 1 ships alone and standalone; slice 2 layers on top and shares
-`ImplantSalvageUtility` entirely.
+- **"Extract implant" gizmo** on a selected corpse, in the same row as Strip and Allow. It *marks*
+  implants rather than ordering a pawn — one row per implant, ticked individually, so the
+  one-order-one-implant rule of §3 survives intact.
+- A plain vanilla **`Designation`** (`Luke_ExtractImplantMark`) carries the mark. Plain, not a
+  subclass, for two reasons: `Designation.ExposeData` is not virtual, and a vanilla designation is
+  cleared by vanilla's own **Cancel** designator for free — so there is no second cancel button.
+  Which implants are queued lives in `GameComponent_ImplantSalvage`, with the designation treated as
+  the source of truth and the queue pruned when it disappears.
+- **`WorkGiver_ExtractImplant`** under the Doctor work type services the marks. Because the job
+  arrives through the work system rather than as an ordered job, it **never pulls a drafted pawn**
+  and respects work priorities — matching skull extraction exactly. `priorityInType` sits below
+  tending the living.
 
-## 8b. Still rejected
+**Better than slice 2 on coverage, not just cost:** the mutant gate never applies, so shambler and
+awoken corpses work.
+
+**Only thing lost:** bill-stack machinery — repeat counts, suspend, reorder — which is meaningless
+for a one-shot extraction.
+
+**The two moments §8 identified are both still served**, just not the way it predicted: the
+right-click float menu is "the raid is over, I want that archotech arm *now*" (an explicit order,
+allowed on drafted pawns because you picked the pawn yourself), and the gizmo is "queue these six
+implants and get to them when a doctor is free".
+
+## 8d. Still rejected
 
 **Option C — patch `Pawn.ButcherProducts` so butchering recovers implants.** Trivial (one
 postfix), but it is a different mod: no skill check, no doctor requirement, no player decision.

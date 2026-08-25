@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <!-- Marks a corpse as having implants queued for extraction. Same shape as vanilla's skull
+       extraction: the mark sits on the body, is cancellable, and is serviced by whichever doctor
+       is free - it never drags a specific pawn off what they were doing, and never a drafted one.
+
+       Texture is a Core path on purpose. UI/Designators/ExtractSkull would read better but ships
+       with Ideology, and ContentFinder would fail for anyone without that DLC. -->
+  <DesignationDef>
+    <defName>Luke_ExtractImplantMark</defName>
+    <texturePath>UI/Designators/Harvest</texturePath>
+    <targetType>Thing</targetType>
+  </DesignationDef>
+
+  <!-- Doctor work. priorityInType sits below tending the living: a corpse is not going anywhere,
+       and a bleeding colonist is. -->
+  <WorkGiverDef>
+    <defName>Luke_ExtractImplant</defName>
+    <label>extract implants</label>
+    <giverClass>ImplantSalvage.WorkGiver_ExtractImplant</giverClass>
+    <workType>Doctor</workType>
+    <verb>extract implant from</verb>
+    <gerund>extracting an implant from</gerund>
+    <priorityInType>25</priorityInType>
+    <requiredCapacities>
+      <li>Manipulation</li>
+    </requiredCapacities>
+    <prioritizeSustains>true</prioritizeSustains>
+  </WorkGiverDef>
+
+</Defs>

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
   <name>Implant Salvage</name>
   <author>Luke</author>
@@ -15,16 +15,26 @@ In vanilla, a raider with an archotech arm and a bionic heart drops a corpse wor
 - Skill matters: the chance of wrecking the implant runs from about 45% at Medicine 0 down to a 2% floor at Medicine 15+, using the same surgery-success stat as real operations, so traits and injuries count too.
 - Failure destroys the implant. Choose your surgeon.
 - One implant per order, exactly like installing one. No "salvage everything" button.
+- Mark corpses that still hold an implant, so you can read a battlefield at a glance.
+- Sort by implant: stockpiles, crematoria and butcher tables gain "allow corpses with implants" / "allow corpses without implants", and every stockpile gets its own implant picker - take bodies for bionics and better, leave the peg legs where they fell.
 - Works at any rot stage, right up until the corpse deteriorates away.
 - Implants only. Natural organs are left alone, so no organ-harvesting mood or ideology fallout.
 
 Works on humans, xenotypes and ghouls (ghouls yield adrenal, corrosive and metalblood hearts - grafted plating and barbs are not recoverable, matching vanilla). Modded prosthetics are picked up automatically.
 
-MULTIPLAYER
-Multiplayer-safe by design, and needs no compatibility patch.
+A corpse is accepted by a stockpile if AT LEAST ONE of its implants is allowed there. A body with a denied peg leg and an allowed bionic arm still gets hauled - denying an implant skips bodies whose only salvage is that part, it never turns away a body carrying something you want.
 
-Does not require Harmony.</description>
+MULTIPLAYER
+Multiplayer-safe by design, and needs no compatibility patch. The extraction rules and every stockpile's implant picker live in the save rather than in per-player mod settings, so all players read the same numbers and changes are synced.</description>
+  <modDependencies>
+    <li>
+      <packageId>brrainz.harmony</packageId>
+      <displayName>Harmony</displayName>
+      <steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
+    </li>
+  </modDependencies>
   <loadAfter>
+    <li>brrainz.harmony</li>
     <li>Ludeon.RimWorld</li>
     <li>Ludeon.RimWorld.Royalty</li>
     <li>Ludeon.RimWorld.Ideology</li>

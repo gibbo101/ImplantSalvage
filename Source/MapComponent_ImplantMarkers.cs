@@ -37,9 +37,23 @@ public class MapComponent_ImplantMarkers : MapComponent
     /// </summary>
     private const float MarkerOffset = 0.28f;
 
-    /// <summary>Above the forbidden X and the question mark, using vanilla's own altitude step.</summary>
+    /// <summary>
+    /// Sits just above the forbidden X, and - critically - under the camera's near clip plane.
+    ///
+    /// There is very little room here. CameraDriver sets nearClipPlane = 0.5f and the camera
+    /// bottoms out at y = 15 when fully zoomed in, so anything drawn above y = 14.5 is clipped
+    /// away entirely. The MetaOverlays layer already starts at 14.268, which leaves 0.232 of
+    /// headroom for the whole layer; vanilla's highest overlay uses 0.2195 of it.
+    ///
+    /// An earlier version used 0.03658537f * 7 = 0.256 and was silently invisible: the markers
+    /// were built and drawn, and the near plane threw every one of them away. Do not raise this
+    /// without checking it against 14.5.
+    ///
+    /// 15f/82f is the offset vanilla's own item-icon overlay uses
+    /// (OverlayDrawer.RenderForbiddenRefuelOverlay), which is the closest analogue to this.
+    /// </summary>
     private static readonly float MarkerAltitude =
-        AltitudeLayer.MetaOverlays.AltitudeFor() + 0.03658537f * 7f;
+        AltitudeLayer.MetaOverlays.AltitudeFor() + 15f / 82f;
 
     private readonly List<Corpse> markedCorpses = new List<Corpse>();
     private readonly List<ThingDef> markedProducts = new List<ThingDef>();
@@ -99,12 +113,15 @@ public class MapComponent_ImplantMarkers : MapComponent
             }
 
             ThingDef product = ImplantSalvageUtility.BestSalvageProduct(corpse);
-            if (product?.uiIcon != null)
+            if (product?.uiIcon == null)
             {
-                markedCorpses.Add(corpse);
-                markedProducts.Add(product);
+                continue;
             }
+
+            markedCorpses.Add(corpse);
+            markedProducts.Add(product);
         }
+
     }
 
     private static void DrawMarker(Corpse corpse, ThingDef product)

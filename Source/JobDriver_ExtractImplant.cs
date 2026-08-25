@@ -61,7 +61,12 @@ public class JobDriver_ExtractImplant : JobDriver
                 return;
             }
 
+            int loadID = implant.loadID;
             ImplantSalvageUtility.Extract(pawn, corpse, implant);
+
+            // Runs on every client inside the synced tick, so this must NOT go through a sync
+            // method - that would apply the removal twice.
+            ImplantSalvagePending.NotifyExtracted(corpse, loadID);
         });
     }
 }

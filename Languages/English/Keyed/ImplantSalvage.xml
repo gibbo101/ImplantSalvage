@@ -10,6 +10,7 @@
   <Luke_ExtractImplantNoManipulation>no manipulation</Luke_ExtractImplantNoManipulation>
 
   <!-- {0} surgeon, {1} implant, {2} corpse. -->
+  <Luke_ExtractImplantFailedLabel>Extraction failed</Luke_ExtractImplantFailedLabel>
   <Luke_ExtractImplantFailed>{0} destroyed {1} while extracting it from {2}.</Luke_ExtractImplantFailed>
 
   <!-- Mod settings. -->
@@ -19,12 +20,22 @@
   <Luke_ImplantSalvageSettingsMinDestroyDesc>The floor no amount of skill can go below, mirroring vanilla surgery always carrying some risk. Set to 0% to make expert extraction perfectly safe.</Luke_ImplantSalvageSettingsMinDestroyDesc>
   <Luke_ImplantSalvageSettingsShowChance>Show the intact chance in the right-click menu</Luke_ImplantSalvageSettingsShowChance>
   <Luke_ImplantSalvageSettingsShowMarker>Mark corpses that hold a salvageable implant</Luke_ImplantSalvageSettingsShowMarker>
-  <Luke_ImplantSalvageSettingsShowMarkerDesc>Draws the implant's own icon over any corpse still carrying one, so you can see which bodies are worth a doctor's time without right-clicking each one. Off by default. Only implants ticked in the list below are marked.</Luke_ImplantSalvageSettingsShowMarkerDesc>
+  <Luke_ImplantSalvageSettingsShowMarkerDesc>Draws the implant's own icon over any corpse still carrying one, so you can see which bodies are worth a doctor's time without right-clicking each one.</Luke_ImplantSalvageSettingsShowMarkerDesc>
 
-  <!-- Per-implant opt-out list. -->
-  <Luke_ImplantSalvageSettingsImplantList>Implants worth salvaging</Luke_ImplantSalvageSettingsImplantList>
-  <Luke_ImplantSalvageSettingsImplantListDesc>Untick anything you would rather not be told about - say, prosthetic legs while keeping bionic legs. This controls the corpse marker and the storage and bill filters; the right-click menu always offers everything, so you can still take an unticked implant by hand. Implants added by other mods appear here automatically and start ticked.</Luke_ImplantSalvageSettingsImplantListDesc>
-  <Luke_ImplantSalvageSettingsAll>Tick all</Luke_ImplantSalvageSettingsAll>
-  <Luke_ImplantSalvageSettingsNone>Untick all</Luke_ImplantSalvageSettingsNone>
+
+  <!-- Per-stockpile implant picker, drawn inside the storage filter tree under Corpses. -->
+  <Luke_ImplantTreeRoot>Corpses containing these implants</Luke_ImplantTreeRoot>
+  <Luke_ImplantTreeDisabledDesc>Tick "allow corpses with implants" above to use this. With it off, this stockpile turns away every implanted body regardless of what is chosen here.</Luke_ImplantTreeDisabledDesc>
+  <Luke_ImplantTreeRootDesc>Ticks here are about which CORPSES to accept, not about storing loose implants - that is under Items, Body parts. A corpse is accepted if at least one of its implants is ticked, so unticking an implant only skips bodies whose sole salvage is that part; it never turns away a body carrying something you do want.</Luke_ImplantTreeRootDesc>
+
+  <!-- Points players at the per-stockpile picker, since there is no global list. -->
+  <Luke_ImplantSalvageSettingsPickerHint>Which implants are worth hauling a body for is set per stockpile, not here - select a stockpile or shelf and look under Corpses in its Storage tab.</Luke_ImplantSalvageSettingsPickerHint>
+
+  <!-- Corpse gizmo. -->
+  <Luke_ExtractImplantGizmo>Extract implant</Luke_ExtractImplantGizmo>
+  <Luke_ExtractImplantGizmoDesc>Mark implants in this body for extraction. Whichever doctor is free will come and cut them out, the same way skull extraction works - no one is pulled off what they are doing, and drafted pawns are never used.</Luke_ExtractImplantGizmoDesc>
+  <Luke_ExtractImplantCancelOne>Cancel: {0}</Luke_ExtractImplantCancelOne>
+  <Luke_ExtractImplantCancel>Cancel extraction</Luke_ExtractImplantCancel>
+  <Luke_ExtractImplantCancelDesc>Clear every implant marked for extraction on this body.</Luke_ExtractImplantCancelDesc>
 
 </LanguageData>

@@ -96,31 +96,37 @@ public static class ImplantSalvageUtility
     }
 
     /// <summary>
-    /// The subset of <see cref="ExtractableImplants"/> the player still wants salvaged, per the
-    /// per-implant settings list ("prosthetic legs no, bionic legs yes").
+    /// Issue an extraction order. The single place the Job is built, so the right-click menu and
+    /// the corpse gizmo cannot drift apart on the details that matter.
     ///
-    /// This governs the corpse marker and the storage/bill filters - the automated, at-a-glance
-    /// paths. It deliberately does NOT govern the right-click menu: an explicit player order stays
-    /// complete, because switching an implant off means "stop nagging me about it", not "make it
-    /// impossible to ever take".
+    /// Multiplayer: TryTakeOrderedJob is the only game-state call, and Multiplayer already syncs it
+    /// (SyncMethods registers it with ExposeParameter(0)). Callers must do nothing else in their
+    /// click delegate - no spawning, no hediff changes, no Rand - because that code runs on the
+    /// clicking client alone.
     /// </summary>
-    public static IEnumerable<Hediff> SalvageableImplants(Corpse corpse)
+    public static void IssueExtractJob(Pawn surgeon, Corpse corpse, Hediff implant)
     {
-        foreach (Hediff hediff in ExtractableImplants(corpse))
-        {
-            // Null-safe on purpose: the storage filters are reachable from other mods' code, and a
-            // missing settings object should mean "salvage everything", never a crash mid-haul.
-            if (ImplantSalvageMod.Settings?.ImplantIsWanted(hediff.def.spawnThingOnRemoved) ?? true)
-            {
-                yield return hediff;
-            }
-        }
+        Job job = JobMaker.MakeJob(ImplantSalvageDefOf.Luke_ExtractImplant, corpse);
+
+        // Which implant. An int on the Job, because Multiplayer serialises the Job itself and the
+        // JobDriver does not exist yet at that point - so the data cannot live on the driver.
+        job.count = implant.loadID;
+
+        // Enemies who die outside the home area leave FORBIDDEN corpses, which is most raid
+        // casualties. This is an explicit player order, so it ignores that, exactly as vanilla's
+        // own ordered jobs do.
+        job.ignoreForbidden = true;
+
+        surgeon.jobs.TryTakeOrderedJob(job, JobTag.Misc);
     }
 
-    /// <summary>Cheap early-exit test for the storage filters, which are called on every haul scan.</summary>
-    public static bool HasSalvageableImplant(Corpse corpse)
+    /// <summary>
+    /// Cheap early-exit test for the storage filters, which are called on every haul scan.
+    /// Deliberately settings-independent: this feeds hauling, which is simulation.
+    /// </summary>
+    public static bool HasExtractableImplant(Corpse corpse)
     {
-        foreach (Hediff _ in SalvageableImplants(corpse))
+        foreach (Hediff _ in ExtractableImplants(corpse))
         {
             return true;
         }
@@ -129,15 +135,15 @@ public static class ImplantSalvageUtility
     }
 
     /// <summary>
-    /// The most valuable wanted implant in a corpse, or null. One marker per corpse showing the
-    /// best thing in it beats burying the body under one icon per implant.
+    /// The most valuable implant in a corpse, or null. One marker per corpse showing the best thing
+    /// in it beats burying the body under one icon per implant.
     /// </summary>
     public static ThingDef BestSalvageProduct(Corpse corpse)
     {
         ThingDef best = null;
         float bestValue = -1f;
 
-        foreach (Hediff hediff in SalvageableImplants(corpse))
+        foreach (Hediff hediff in ExtractableImplants(corpse))
         {
             ThingDef product = hediff.def.spawnThingOnRemoved;
             if (product != null && product.BaseMarketValue > bestValue)
@@ -181,10 +187,19 @@ public static class ImplantSalvageUtility
     /// </summary>
     public static float DestroyChanceFor(Pawn surgeon)
     {
+        // Read the curve from the save, not from ModSettings. This runs inside the JobDriver's
+        // Rand.Chance roll, so per-client numbers would make the same extraction succeed on one
+        // Multiplayer client and fail on another. GameComponent_ImplantSalvage explains the setup;
+        // the ModSettings fallback covers the main menu, where no game exists yet.
+        GameComponent_ImplantSalvage rules = GameComponent_ImplantSalvage.Current;
         ImplantSalvageSettings settings = ImplantSalvageMod.Settings;
+
+        float maxDestroyChance = rules?.maxDestroyChance ?? settings?.maxDestroyChance ?? 0.5f;
+        float minDestroyChance = rules?.minDestroyChance ?? settings?.minDestroyChance ?? 0.02f;
+
         float stat = surgeon.GetStatValue(StatDefOf.MedicalSurgerySuccessChance);
-        float chance = settings.maxDestroyChance * (1f - Mathf.Clamp01(stat));
-        return Mathf.Clamp(chance, settings.minDestroyChance, settings.maxDestroyChance);
+        float chance = maxDestroyChance * (1f - Mathf.Clamp01(stat));
+        return Mathf.Clamp(chance, minDestroyChance, maxDestroyChance);
     }
 
     /// <summary>
@@ -274,10 +289,16 @@ public static class ImplantSalvageUtility
 
         if (destroyed)
         {
-            Messages.Message(
+            // A Letter rather than a Messages toast, matching vanilla's own surgery failure
+            // (SurgeryOutcome sends LetterDefOf.NegativeEvent). Losing an archotech arm to a bad
+            // roll deserves the same weight as a botched operation - a toast scrolls away unread.
+            // Sent from inside the simulation tick, so every Multiplayer client raises its own
+            // copy locally; letters are presentation, not synced state.
+            Find.LetterStack.ReceiveLetter(
+                "Luke_ExtractImplantFailedLabel".Translate(),
                 "Luke_ExtractImplantFailed".Translate(surgeon.LabelShort, implantLabel, corpse.Label),
-                surgeon,
-                MessageTypeDefOf.NegativeEvent);
+                LetterDefOf.NegativeEvent,
+                new LookTargets(corpse));
         }
         else if (product != null)
         {
