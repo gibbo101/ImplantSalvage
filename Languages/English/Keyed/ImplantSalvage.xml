@@ -18,5 +18,13 @@
   <Luke_ImplantSalvageSettingsMinDestroy>Minimum destroy chance (master surgeon)</Luke_ImplantSalvageSettingsMinDestroy>
   <Luke_ImplantSalvageSettingsMinDestroyDesc>The floor no amount of skill can go below, mirroring vanilla surgery always carrying some risk. Set to 0% to make expert extraction perfectly safe.</Luke_ImplantSalvageSettingsMinDestroyDesc>
   <Luke_ImplantSalvageSettingsShowChance>Show the intact chance in the right-click menu</Luke_ImplantSalvageSettingsShowChance>
+  <Luke_ImplantSalvageSettingsShowMarker>Mark corpses that hold a salvageable implant</Luke_ImplantSalvageSettingsShowMarker>
+  <Luke_ImplantSalvageSettingsShowMarkerDesc>Draws the implant's own icon over any corpse still carrying one, so you can see which bodies are worth a doctor's time without right-clicking each one. Off by default. Only implants ticked in the list below are marked.</Luke_ImplantSalvageSettingsShowMarkerDesc>
+
+  <!-- Per-implant opt-out list. -->
+  <Luke_ImplantSalvageSettingsImplantList>Implants worth salvaging</Luke_ImplantSalvageSettingsImplantList>
+  <Luke_ImplantSalvageSettingsImplantListDesc>Untick anything you would rather not be told about - say, prosthetic legs while keeping bionic legs. This controls the corpse marker and the storage and bill filters; the right-click menu always offers everything, so you can still take an unticked implant by hand. Implants added by other mods appear here automatically and start ticked.</Luke_ImplantSalvageSettingsImplantListDesc>
+  <Luke_ImplantSalvageSettingsAll>Tick all</Luke_ImplantSalvageSettingsAll>
+  <Luke_ImplantSalvageSettingsNone>Untick all</Luke_ImplantSalvageSettingsNone>
 
 </LanguageData>
