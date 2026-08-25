@@ -11,7 +11,7 @@
   <SpecialThingFilterDef>
     <defName>Luke_AllowCorpsesWithImplants</defName>
     <label>allow corpses with implants</label>
-    <description>Allow dead bodies that still hold an implant worth salvaging. Untick this on a crematorium or butcher table bill to stop it destroying bionics, or on a stockpile to keep implanted bodies out of it. Only implants ticked in the Implant Salvage mod settings count.</description>
+    <description>Allow dead bodies that still hold an implant worth salvaging. Untick this on a crematorium or butcher table bill to stop it destroying bionics, or on a stockpile to keep implanted bodies out of it.</description>
     <parentCategory>Corpses</parentCategory>
     <allowedByDefault>true</allowedByDefault>
     <saveKey>lukeAllowCorpsesWithImplants</saveKey>

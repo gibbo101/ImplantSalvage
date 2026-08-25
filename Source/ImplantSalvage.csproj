@@ -11,12 +11,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Slice 1 needs NO Harmony: FloatMenuMakerMap discovers FloatMenuOptionProvider
-         subclasses via AllSubclassesNonAbstract(), so our provider auto-registers.
-         It also needs no MultiplayerAPI: Multiplayer already syncs
-         Pawn_JobTracker.TryTakeOrderedJob, which is the only game-state call we make
-         from UI code. Add either only if slice 2 requires it. -->
     <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.*" />
+    <!-- Harmony arrives with the per-stockpile implant filter: ITab_Storage.FillTab needs an extra
+         button and StorageSettings.AllowedToAccept needs to consult our filter. Compile-time only -
+         never ship 0Harmony.dll, the standalone Harmony mod provides the runtime copy. -->
+    <PackageReference Include="Lib.Harmony" Version="2.3.3" ExcludeAssets="runtime" />
+    <!-- The extraction rules live in the save and are pushed through a synced method, because
+         DestroyChanceFor feeds a Rand roll inside the JobDriver and per-client ModSettings would
+         desync it. The API stub DLL must ship in Assemblies/ (see CopyToMod) or the mod fails to
+         load even in singleplayer. -->
+    <PackageReference Include="RimWorld.MultiplayerAPI" Version="0.6.0" />
   </ItemGroup>
 
   <!-- Use Krafs.Rimworld.Ref's reference assemblies instead of the .NET Framework dev pack. -->
@@ -26,9 +30,14 @@
     </PropertyGroup>
   </Target>
 
-  <!-- Drop the built DLL into the mod's Assemblies/ folder. -->
+  <!-- Drop the built DLL into the mod's Assemblies/ folder. Also ship the MultiplayerAPI stub
+       (0MultiplayerAPI.dll): our assembly references it, so it must be present at runtime or the
+       mod won't load at all. The "0" prefix makes RimWorld load it before our DLL. When the
+       Multiplayer mod is absent, the stub's MP.enabled returns false and our sync code no-ops. -->
   <Target Name="CopyToMod" AfterTargets="Build">
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll"
+          DestinationFolder="$(ProjectDir)..\Assemblies\" />
+    <Copy SourceFiles="$(OutputPath)0MultiplayerAPI.dll"
           DestinationFolder="$(ProjectDir)..\Assemblies\" />
   </Target>
 
