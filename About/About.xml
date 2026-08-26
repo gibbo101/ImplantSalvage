@@ -13,8 +13,9 @@ In vanilla, a raider with an archotech arm and a bionic heart drops a corpse wor
 - Right-click a corpse with a colonist selected and pick the implant by name, e.g. "Bionic arm (left arm)".
 - Only pawns who actually do Doctor work can be ordered to do it. Anyone else gets a greyed-out option explaining why.
 - Skill matters: the chance of wrecking the implant runs from about 45% at Medicine 0 down to a 2% floor at Medicine 15+, using the same surgery-success stat as real operations, so traits and injuries count too.
-- Failure destroys the implant. Choose your surgeon.
+- Failure destroys the implant, and says so with a proper alert, just like a botched operation. Choose your surgeon.
 - One implant per order, exactly like installing one. No "salvage everything" button.
+- Or mark a body and walk away: select a corpse, hit "Extract implant" and tick what you want. Whichever doctor is free comes and cuts it out, the same way skull extraction works - work priorities are respected, drafted pawns are never pulled off a fight, and vanilla's Cancel clears the mark.
 - Mark corpses that still hold an implant, so you can read a battlefield at a glance.
 - Sort by implant: stockpiles, crematoria and butcher tables gain "allow corpses with implants" / "allow corpses without implants", and every stockpile gets its own implant picker - take bodies for bionics and better, leave the peg legs where they fell.
 - Works at any rot stage, right up until the corpse deteriorates away.
