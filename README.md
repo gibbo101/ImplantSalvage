@@ -74,6 +74,9 @@ through a synced method in `ImplantSalvageActions`; the outcome roll is seeded s
 Extraction has been confirmed desync-free in a live two-client session. The per-stockpile picker and
 cancel syncs carry no randomness but have not had the same test.
 
-## Credits
+## Licence
 
-RimWorld is by Ludeon Studios. The preview image is composed from the game's own sprites.
+Code and defs are [MIT](LICENSE) — fork it, learn from it, lift bits of it.
+
+That covers this repository's own work only. RimWorld is by Ludeon Studios, and the sprites the
+preview image is composed from are theirs, not mine to relicence.
