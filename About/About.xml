@@ -6,27 +6,17 @@
   <supportedVersions>
     <li>1.6</li>
   </supportedVersions>
-  <description>Bionics no longer die with their owner. Right-click a corpse with a doctor selected and pull the implant out.
+  <description>A raider dies wearing an archotech arm and a bionic heart, and you get nothing. In vanilla those parts only survive if you take him alive.
 
-In vanilla, a raider with an archotech arm and a bionic heart drops a corpse worth nothing - the parts only survive if you capture him alive. Implant Salvage lets a doctor recover them from the body instead.
+Implant Salvage lets a doctor cut them out of the body instead.
 
-- Right-click a corpse with a colonist selected and pick the implant by name, e.g. "Bionic arm (left arm)".
-- Only pawns who actually do Doctor work can be ordered to do it. Anyone else gets a greyed-out option explaining why.
-- Skill matters: the chance of wrecking the implant runs from about 45% at Medicine 0 down to a 2% floor at Medicine 15+, using the same surgery-success stat as real operations, so traits and injuries count too.
-- Failure destroys the implant, and says so with a proper alert, just like a botched operation. Choose your surgeon.
-- One implant per order, exactly like installing one. No "salvage everything" button.
-- Or mark a body and walk away: select a corpse, hit "Extract implant" and tick what you want. Whichever doctor is free comes and cuts it out, the same way skull extraction works - work priorities are respected, drafted pawns are never pulled off a fight, and vanilla's Cancel clears the mark.
-- Mark corpses that still hold an implant, so you can read a battlefield at a glance.
-- Sort by implant: stockpiles, crematoria and butcher tables gain "allow corpses with implants" / "allow corpses without implants", and every stockpile gets its own implant picker - take bodies for bionics and better, leave the peg legs where they fell.
-- Works at any rot stage, right up until the corpse deteriorates away.
-- Implants only. Natural organs are left alone, so no organ-harvesting mood or ideology fallout.
+There is still a risk of botching the extraction. A useless doctor wrecks the implant about half the time. A good one almost never does.
 
-Works on humans, xenotypes and ghouls (ghouls yield adrenal, corrosive and metalblood hearts - grafted plating and barbs are not recoverable, matching vanilla). Modded prosthetics are picked up automatically.
+Bodies worth salvaging get a marker so you can read a battlefield at a glance, and your stockpiles, crematoria and butcher tables can be told which corpses are worth keeping - bionics and better hauled in, peg legs left where they fell.
 
-A corpse is accepted by a stockpile if AT LEAST ONE of its implants is allowed there. A body with a denied peg leg and an allowed bionic arm still gets hauled - denying an implant skips bodies whose only salvage is that part, it never turns away a body carrying something you want.
+Implants only. Nobody is harvesting organs, so there is no mood or ideology fallout.
 
-MULTIPLAYER
-Multiplayer-safe by design, and needs no compatibility patch. The extraction rules and every stockpile's implant picker live in the save rather than in per-player mod settings, so all players read the same numbers and changes are synced.</description>
+Requires Harmony. Multiplayer-safe, and needs no compatibility patch.</description>
   <modDependencies>
     <li>
       <packageId>brrainz.harmony</packageId>
