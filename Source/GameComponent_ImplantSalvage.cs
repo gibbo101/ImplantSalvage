@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RimWorld;
 using Verse;
 
 namespace ImplantSalvage;
@@ -74,6 +75,18 @@ public class GameComponent_ImplantSalvage : GameComponent
         }
 
         seeded = true;
+    }
+
+    /// <summary>Once a day, drop saved state whose corpse or storage no longer exists.</summary>
+    public override void GameComponentTick()
+    {
+        if (Find.TickManager.TicksGame % GenDate.TicksPerDay != 0)
+        {
+            return;
+        }
+
+        ImplantSalvagePending.PruneStaleMarks(this);
+        ImplantSalvageStorage.PruneStaleSelections(this);
     }
 
     public override void ExposeData()

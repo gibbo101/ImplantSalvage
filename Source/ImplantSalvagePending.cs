@@ -166,6 +166,37 @@ public static class ImplantSalvagePending
         SyncDesignation(corpse, pending);
     }
 
+    /// <summary>
+    /// Keep marks and the queue in step with the corpses that still have something to extract. A
+    /// mark whose queued implants have all gone (taken by another order, or lost with their part)
+    /// is removed, and queue entries for corpses that no longer carry a mark (destroyed, buried,
+    /// cremated) are dropped. Every mark counts, including one on a corpse a pawn is carrying.
+    /// Runs inside the simulation tick, so every Multiplayer client prunes identically.
+    /// </summary>
+    public static void PruneStaleMarks(GameComponent_ImplantSalvage component)
+    {
+        HashSet<int> marked = new HashSet<int>();
+        foreach (Map map in Find.Maps)
+        {
+            DesignationManager designations = map.designationManager;
+            List<Designation> marks =
+                new List<Designation>(designations.designationsByDef[ImplantSalvageDefOf.Luke_ExtractImplantMark]);
+            foreach (Designation mark in marks)
+            {
+                if (mark.target.Thing is Corpse corpse && NextImplant(corpse) != null)
+                {
+                    marked.Add(corpse.thingIDNumber);
+                }
+                else
+                {
+                    designations.RemoveDesignation(mark);
+                }
+            }
+        }
+
+        component.pendingExtractions.RemoveAll(p => !marked.Contains(p.corpseId));
+    }
+
     private static void SyncDesignation(Corpse corpse, PendingExtraction pending)
     {
         GameComponent_ImplantSalvage component = GameComponent_ImplantSalvage.Current;

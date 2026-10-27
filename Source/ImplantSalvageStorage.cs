@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using RimWorld;
+using RimWorld.Planet;
 using Verse;
 
 namespace ImplantSalvage;
@@ -33,11 +34,98 @@ public static class ImplantSalvageStorage
     {
         return parent switch
         {
-            Zone zone => "z" + zone.ID,
-            StorageGroup group => "g" + group.loadID,
-            ThingComp comp when comp.parent != null => "t" + comp.parent.thingIDNumber,
-            Thing thing => "t" + thing.thingIDNumber,
+            Zone zone => ZoneKeyPrefix + zone.ID,
+            StorageGroup group => GroupKeyPrefix + group.loadID,
+            ThingComp comp when comp.parent != null => ThingKeyPrefix + comp.parent.thingIDNumber,
+            Thing thing => ThingKeyPrefix + thing.thingIDNumber,
             _ => null,
+        };
+    }
+
+    private const string ZoneKeyPrefix = "z";
+    private const string GroupKeyPrefix = "g";
+    private const string ThingKeyPrefix = "t";
+
+    /// <summary>
+    /// Drop the selections of storage that no longer exists anywhere. Zones and storage groups
+    /// only exist on maps. A storage building keeps its selection while it exists in any form:
+    /// built, blueprinted or framed on a map, uninstalled on a map, or carried by a caravan.
+    /// Runs inside the simulation tick, so every Multiplayer client drops the same keys.
+    /// </summary>
+    public static void PruneStaleSelections(GameComponent_ImplantSalvage component)
+    {
+        if (component.storageImplantAllowed.Count == 0)
+        {
+            return;
+        }
+
+        HashSet<int> zones = new HashSet<int>();
+        HashSet<int> groups = new HashSet<int>();
+        HashSet<int> things = new HashSet<int>();
+        foreach (Map map in Find.Maps)
+        {
+            foreach (Zone zone in map.zoneManager.AllZones)
+            {
+                zones.Add(zone.ID);
+            }
+
+            foreach (StorageGroup group in map.storageGroups.StorageGroupsForReading)
+            {
+                groups.Add(group.loadID);
+            }
+
+            foreach (Thing thing in map.listerThings.AllThings)
+            {
+                AddThingAndContents(things, thing);
+            }
+        }
+
+        foreach (Caravan caravan in Find.WorldObjects.Caravans)
+        {
+            foreach (Thing thing in CaravanInventoryUtility.AllInventoryItems(caravan))
+            {
+                AddThingAndContents(things, thing);
+            }
+        }
+
+        List<string> stale = new List<string>();
+        foreach (string key in component.storageImplantAllowed.Keys)
+        {
+            if (!IsLive(key, zones, groups, things))
+            {
+                stale.Add(key);
+            }
+        }
+
+        foreach (string key in stale)
+        {
+            component.storageImplantAllowed.Remove(key);
+        }
+    }
+
+    private static void AddThingAndContents(HashSet<int> things, Thing thing)
+    {
+        things.Add(thing.thingIDNumber);
+        if (thing is MinifiedThing minified && minified.InnerThing != null)
+        {
+            things.Add(minified.InnerThing.thingIDNumber);
+        }
+    }
+
+    /// <summary>Whether the key's owner exists. A key this mod did not write is kept.</summary>
+    private static bool IsLive(string key, HashSet<int> zones, HashSet<int> groups, HashSet<int> things)
+    {
+        if (key.Length < 2 || !int.TryParse(key.Substring(1), out int id))
+        {
+            return true;
+        }
+
+        return key.Substring(0, 1) switch
+        {
+            ZoneKeyPrefix => zones.Contains(id),
+            GroupKeyPrefix => groups.Contains(id),
+            ThingKeyPrefix => things.Contains(id),
+            _ => true,
         };
     }
 
