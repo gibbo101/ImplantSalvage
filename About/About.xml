@@ -19,7 +19,7 @@ Implants only. Nobody is harvesting organs, so there is no mood or ideology fall
 
 Requires Harmony. Supports RimWorld 1.6 and 1.7. Tested in Multiplayer on 1.6 with no issues (Multiplayer isn't out for 1.7 yet).
 
-LATEST UPDATE
+WHAT'S NEW IN 1.0.1
 - RimWorld 1.7 support. 1.6 keeps working.
 - Fixed: taking out an implant that sits inside a body part - a death acidifier, brain chips - destroyed that part and every other implant in it. Each implant now comes out on its own, the way vanilla removes implants, so a brain full of chips gives you every chip.
 - Extraction speed now follows the doctor's medical operation speed, so work-speed bonuses, medical skill and good hands all make it quicker.
