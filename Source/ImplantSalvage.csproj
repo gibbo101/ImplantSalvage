@@ -1,44 +1,60 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- One source, two builds: net48 for RimWorld 1.6 (Unity/Mono) and net10.0 for RimWorld 1.7
+       (Ludeon's own engine on .NET 10). Each lands in its version folder's Assemblies/, which the
+       game picks by its own version (no LoadFolders.xml needed: it loads <version>/ plus the root). -->
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFrameworks>net48;net10.0</TargetFrameworks>
     <LangVersion>12</LangVersion>
     <AssemblyName>ImplantSalvage</AssemblyName>
     <Nullable>disable</Nullable>
     <Optimize>true</Optimize>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <DebugType>none</DebugType>
+    <GameVersion Condition="'$(TargetFramework)' == 'net48'">1.6</GameVersion>
+    <GameVersion Condition="'$(TargetFramework)' == 'net10.0'">1.7</GameVersion>
+    <!-- MultiplayerAPI ships net472 only; it is a reference-only stub, so the fallback is fine. -->
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.*" />
-    <!-- Harmony arrives with the per-stockpile implant filter: ITab_Storage.FillTab needs an extra
-         button and StorageSettings.AllowedToAccept needs to consult our filter. Compile-time only -
-         never ship 0Harmony.dll, the standalone Harmony mod provides the runtime copy. -->
-    <PackageReference Include="Lib.Harmony" Version="2.3.3" ExcludeAssets="runtime" />
     <!-- The extraction rules live in the save and are pushed through a synced method, because
          DestroyChanceFor feeds a Rand roll inside the JobDriver and per-client ModSettings would
          desync it. The API stub DLL must ship in Assemblies/ (see CopyToMod) or the mod fails to
          load even in singleplayer. -->
-    <PackageReference Include="RimWorld.MultiplayerAPI" Version="0.6.0" />
+    <PackageReference Include="RimWorld.MultiplayerAPI" Version="0.6.0" GeneratePathProperty="true" />
   </ItemGroup>
 
-  <!-- Use Krafs.Rimworld.Ref's reference assemblies instead of the .NET Framework dev pack. -->
-  <Target Name="RemoveFramework" BeforeTargets="FindReferenceAssembliesForReferences;ResolveReferences">
+  <!-- Harmony arrives with the per-stockpile implant filter: ITab_Storage.FillTab needs an extra
+       button and StorageSettings.AllowedToAccept needs to consult our filter. Compile-time only -
+       never ship 0Harmony.dll, the standalone Harmony mod provides the runtime copy. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.*" />
+    <PackageReference Include="Lib.Harmony" Version="2.3.3" ExcludeAssets="runtime" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.7.*-*" />
+    <PackageReference Include="Lib.Harmony" Version="3.0.0-rc.3" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <!-- 1.6: use Krafs.Rimworld.Ref's reference assemblies instead of the .NET Framework dev pack.
+       1.7 takes .NET itself from the SDK, so this must not run there. -->
+  <Target Name="RemoveFramework" BeforeTargets="FindReferenceAssembliesForReferences;ResolveReferences"
+          Condition="'$(TargetFramework)' == 'net48'">
     <PropertyGroup>
       <TargetFrameworkDirectory></TargetFrameworkDirectory>
     </PropertyGroup>
   </Target>
 
-  <!-- Drop the built DLL into the mod's Assemblies/ folder. Also ship the MultiplayerAPI stub
+  <!-- Drop the built DLL into <version>/Assemblies/. Also ship the MultiplayerAPI stub
        (0MultiplayerAPI.dll): our assembly references it, so it must be present at runtime or the
        mod won't load at all. The "0" prefix makes RimWorld load it before our DLL. When the
-       Multiplayer mod is absent, the stub's MP.enabled returns false and our sync code no-ops. -->
-  <Target Name="CopyToMod" AfterTargets="Build">
+       Multiplayer mod is absent, the stub's MP.enabled returns false and our sync code no-ops.
+       The stub is copied from the package because a net10.0 build leaves it out of bin/. -->
+  <Target Name="CopyToMod" AfterTargets="Build" Condition="'$(GameVersion)' != ''">
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll"
-          DestinationFolder="$(ProjectDir)..\Assemblies\" />
-    <Copy SourceFiles="$(OutputPath)0MultiplayerAPI.dll"
-          DestinationFolder="$(ProjectDir)..\Assemblies\" />
+          DestinationFolder="$(ProjectDir)..\$(GameVersion)\Assemblies\" />
+    <Copy SourceFiles="$(PkgRimWorld_MultiplayerAPI)\lib\net472\0MultiplayerAPI.dll"
+          DestinationFolder="$(ProjectDir)..\$(GameVersion)\Assemblies\" />
   </Target>
 
 </Project>

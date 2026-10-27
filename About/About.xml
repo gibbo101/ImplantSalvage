@@ -5,6 +5,7 @@
   <packageId>luke.implantsalvage</packageId>
   <supportedVersions>
     <li>1.6</li>
+    <li>1.7</li>
   </supportedVersions>
   <description>A raider dies wearing an archotech arm and a bionic heart, and you get nothing. In vanilla those parts only survive if you take him alive.
 
