@@ -1,20 +1,17 @@
 using System.Collections.Generic;
-using RimWorld;
 using Verse;
 
 namespace ImplantSalvage;
 
 /// <summary>
-/// "Extract implant" and "Cancel" on a selected corpse, in the same gizmo row as Strip and Allow.
+/// "Extract implant" on a selected corpse, in the same gizmo row as Strip and Allow.
 ///
 /// Marks the body rather than ordering a specific pawn, exactly like vanilla's skull extraction:
 /// the mark is visible and cancellable, and whichever doctor is free services it through the work
-/// system. An earlier version sent the nearest capable colonist immediately, which had two faults
-/// this fixes - there was nothing to cancel, and it happily dragged a drafted pawn out of a fight.
+/// system, so a drafted pawn is never pulled out of a fight.
 ///
-/// The right-click menu keeps its immediate behaviour, including on drafted pawns. That is a
-/// different thing and deliberately so: there you have picked the pawn yourself, so it is an order,
-/// not a job posting.
+/// The right-click menu is deliberately different: there you have picked the pawn yourself, so it
+/// is an immediate order, drafted pawns included, not a job posting.
 ///
 /// There is no Cancel gizmo here. Vanilla's Cancel designator already clears our mark - that is the
 /// pay-off for using a plain Designation - and skull extraction does not ship its own either.
@@ -56,18 +53,17 @@ public static class ImplantSalvageGizmo
 
         foreach (Hediff implant in ImplantSalvageUtility.ExtractableImplants(corpse))
         {
-            Hediff localImplant = implant;
-            bool pending = ImplantSalvagePending.IsPending(corpse, localImplant.loadID);
+            bool pending = ImplantSalvagePending.IsPending(corpse, implant.loadID);
 
-            string label = ImplantSalvageUtility.ImplantLabel(localImplant);
+            string label = ImplantSalvageUtility.ImplantLabel(implant);
             label = pending
                 ? "Luke_ExtractImplantCancelOne".Translate(label)
                 : "Luke_ExtractImplant".Translate(label);
 
             options.Add(new FloatMenuOption(label, delegate
             {
-                ImplantSalvageActions.ToggleExtraction(corpse, localImplant.loadID);
-            }, localImplant.def.spawnThingOnRemoved));
+                ImplantSalvageActions.ToggleExtraction(corpse, implant.loadID);
+            }, implant.def.spawnThingOnRemoved));
         }
 
         if (options.Count > 0)

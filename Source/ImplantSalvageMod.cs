@@ -16,26 +16,28 @@ namespace ImplantSalvage;
 /// </summary>
 public class ImplantSalvageSettings : ModSettings
 {
+    public const float DefaultMaxDestroyChance = 0.5f;
+    public const float DefaultMinDestroyChance = 0.02f;
+
     /// <summary>Destroy chance for a surgeon with no medical ability whatsoever.</summary>
-    public float maxDestroyChance = 0.5f;
+    public float maxDestroyChance = DefaultMaxDestroyChance;
 
     /// <summary>Floor that skill cannot go below, mirroring vanilla's "always a small chance of failure".</summary>
-    public float minDestroyChance = 0.02f;
+    public float minDestroyChance = DefaultMinDestroyChance;
 
     public bool showIntactChance = true;
 
     /// <summary>
-    /// Draw a marker over corpses that still hold an implant. On by default: shipped off, it was
-    /// invisible until someone went looking in the settings menu, and a feature nobody finds is
-    /// worse than one they switch off.
+    /// Draw a marker over corpses that still hold an implant. On by default, so the feature is
+    /// found in play rather than only by someone browsing the settings menu.
     /// </summary>
     public bool showCorpseMarker = true;
 
     public override void ExposeData()
     {
         base.ExposeData();
-        Scribe_Values.Look(ref maxDestroyChance, "maxDestroyChance", 0.5f);
-        Scribe_Values.Look(ref minDestroyChance, "minDestroyChance", 0.02f);
+        Scribe_Values.Look(ref maxDestroyChance, "maxDestroyChance", DefaultMaxDestroyChance);
+        Scribe_Values.Look(ref minDestroyChance, "minDestroyChance", DefaultMinDestroyChance);
         Scribe_Values.Look(ref showIntactChance, "showIntactChance", defaultValue: true);
         Scribe_Values.Look(ref showCorpseMarker, "showCorpseMarker", defaultValue: true);
     }
@@ -73,13 +75,14 @@ public class ImplantSalvageMod : Mod
 
         if (pendingMaxDestroyChance.HasValue && GameComponent_ImplantSalvage.Current != null)
         {
-            ImplantSalvageActions.SetDestroyChances(
-                pendingMaxDestroyChance.Value,
-                pendingMinDestroyChance ?? Settings.minDestroyChance);
+            float maxDestroy = pendingMaxDestroyChance.Value;
+            float minDestroy = pendingMinDestroyChance ?? Settings.minDestroyChance;
+
+            ImplantSalvageActions.SetDestroyChances(maxDestroy, minDestroy);
 
             // Keep the stored copy in step, so the next new game starts from what was last chosen.
-            Settings.maxDestroyChance = pendingMaxDestroyChance.Value;
-            Settings.minDestroyChance = pendingMinDestroyChance ?? Settings.minDestroyChance;
+            Settings.maxDestroyChance = maxDestroy;
+            Settings.minDestroyChance = minDestroy;
         }
 
         pendingMaxDestroyChance = null;
@@ -99,17 +102,13 @@ public class ImplantSalvageMod : Mod
         float maxDestroy = pendingMaxDestroyChance ?? rules?.maxDestroyChance ?? Settings.maxDestroyChance;
         float minDestroy = pendingMinDestroyChance ?? rules?.minDestroyChance ?? Settings.minDestroyChance;
 
-        listing.Label("Luke_ImplantSalvageSettingsMaxDestroy".Translate() + ": " +
-                      maxDestroy.ToStringPercent());
-        listing.Label("Luke_ImplantSalvageSettingsMaxDestroyDesc".Translate(), -1f, null);
-        float newMaxDestroy = listing.Slider(maxDestroy, 0f, 1f);
+        float newMaxDestroy = ChanceSlider(listing, "Luke_ImplantSalvageSettingsMaxDestroy",
+            "Luke_ImplantSalvageSettingsMaxDestroyDesc", maxDestroy, 1f);
 
         listing.Gap();
 
-        listing.Label("Luke_ImplantSalvageSettingsMinDestroy".Translate() + ": " +
-                      minDestroy.ToStringPercent());
-        listing.Label("Luke_ImplantSalvageSettingsMinDestroyDesc".Translate(), -1f, null);
-        float newMinDestroy = listing.Slider(minDestroy, 0f, 0.25f);
+        float newMinDestroy = ChanceSlider(listing, "Luke_ImplantSalvageSettingsMinDestroy",
+            "Luke_ImplantSalvageSettingsMinDestroyDesc", minDestroy, 0.25f);
 
         if (rules != null)
         {
@@ -129,14 +128,9 @@ public class ImplantSalvageMod : Mod
 
         listing.Gap();
 
-        bool show = Settings.showIntactChance;
-        listing.CheckboxLabeled("Luke_ImplantSalvageSettingsShowChance".Translate(), ref show);
-        Settings.showIntactChance = show;
-
-        bool marker = Settings.showCorpseMarker;
-        listing.CheckboxLabeled("Luke_ImplantSalvageSettingsShowMarker".Translate(), ref marker,
+        listing.CheckboxLabeled("Luke_ImplantSalvageSettingsShowChance".Translate(), ref Settings.showIntactChance);
+        listing.CheckboxLabeled("Luke_ImplantSalvageSettingsShowMarker".Translate(), ref Settings.showCorpseMarker,
             "Luke_ImplantSalvageSettingsShowMarkerDesc".Translate());
-        Settings.showCorpseMarker = marker;
 
         listing.Gap();
 
@@ -147,5 +141,13 @@ public class ImplantSalvageMod : Mod
 
         listing.End();
         base.DoSettingsWindowContents(inRect);
+    }
+
+    /// <summary>A labelled percentage slider from 0 to <paramref name="max"/>; returns the new value.</summary>
+    private static float ChanceSlider(Listing_Standard listing, string labelKey, string descKey, float value, float max)
+    {
+        listing.Label(labelKey.Translate() + ": " + value.ToStringPercent());
+        listing.Label(descKey.Translate(), -1f, null);
+        return listing.Slider(value, 0f, max);
     }
 }

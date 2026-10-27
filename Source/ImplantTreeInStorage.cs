@@ -69,18 +69,19 @@ public static class ImplantTreeInStorage
         bool enabled = settings?.filter?.Allows(ImplantSalvageDefOf.Luke_AllowCorpsesWithImplants) ?? true;
 
         // Null means never customised, which is the same as everything allowed.
-        List<string> filter = ImplantSalvageStorage.AllowedFor(parent);
+        List<string> allowed = ImplantSalvageStorage.AllowedFor(parent);
+
+        string rootLabel = "Luke_ImplantTreeRoot".Translate();
+        MultiCheckboxState rootState = StateOf(allowed, AllProducts());
 
         if (!enabled)
         {
-            DrawRow(listing, indentLevel, "Luke_ImplantTreeRoot".Translate(),
-                "Luke_ImplantTreeDisabledDesc".Translate(), openable: false, isOpen: false,
-                StateOf(filter, AllProducts()), out _, enabled: false);
+            DrawRow(listing, indentLevel, rootLabel, "Luke_ImplantTreeDisabledDesc".Translate(),
+                openable: false, isOpen: false, rootState, out _, enabled: false);
             return;
         }
 
-        MultiCheckboxState rootState = StateOf(filter, AllProducts());
-        bool rootToggled = DrawRow(listing, indentLevel, "Luke_ImplantTreeRoot".Translate(),
+        bool rootToggled = DrawRow(listing, indentLevel, rootLabel,
             "Luke_ImplantTreeRootDesc".Translate(), openable: true, rootOpen,
             rootState, out MultiCheckboxState newRootState);
 
@@ -89,11 +90,11 @@ public static class ImplantTreeInStorage
             rootOpen = !rootOpen;
         }
 
-        // Only on an actual click. Applying whenever the state merely *is* On would re-allow
-        // everything every frame, which silently undid each individual tick a frame after it landed.
+        // Applied only when the click changed the state. Applying whenever the state merely *is* On
+        // would re-allow everything every frame and undo each individual tick.
         if (newRootState != rootState)
         {
-            Apply(key, filter, AllProducts(), newRootState == MultiCheckboxState.On);
+            Apply(key, allowed, AllProducts(), newRootState == MultiCheckboxState.On);
         }
 
         if (!rootOpen)
@@ -107,7 +108,7 @@ public static class ImplantTreeInStorage
             List<ThingDef> members = groups[category];
             bool open = OpenCategories.Contains(category);
 
-            MultiCheckboxState state = StateOf(filter, members);
+            MultiCheckboxState state = StateOf(allowed, members);
             bool toggled = DrawRow(listing, indentLevel + 1, category.LabelCap, category.description,
                 openable: true, open, state, out MultiCheckboxState newState);
 
@@ -125,7 +126,7 @@ public static class ImplantTreeInStorage
 
             if (newState != state)
             {
-                Apply(key, filter, members, newState == MultiCheckboxState.On);
+                Apply(key, allowed, members, newState == MultiCheckboxState.On);
             }
 
             if (!OpenCategories.Contains(category))
@@ -136,16 +137,16 @@ public static class ImplantTreeInStorage
             for (int m = 0; m < members.Count; m++)
             {
                 ThingDef product = members[m];
-                bool allowed = ImplantSalvageStorage.Allows(filter, product);
+                bool productAllowed = ImplantSalvageStorage.Allows(allowed, product);
 
                 DrawRow(listing, indentLevel + 2, product.LabelCap, product.description,
                     openable: false, isOpen: false,
-                    allowed ? MultiCheckboxState.On : MultiCheckboxState.Off,
+                    productAllowed ? MultiCheckboxState.On : MultiCheckboxState.Off,
                     out MultiCheckboxState newProductState);
 
-                if ((newProductState == MultiCheckboxState.On) != allowed)
+                if ((newProductState == MultiCheckboxState.On) != productAllowed)
                 {
-                    Apply(key, filter, new List<ThingDef> { product }, newProductState == MultiCheckboxState.On);
+                    Apply(key, allowed, new List<ThingDef> { product }, newProductState == MultiCheckboxState.On);
                 }
             }
         }
@@ -202,14 +203,14 @@ public static class ImplantTreeInStorage
         return toggled;
     }
 
-    private static MultiCheckboxState StateOf(List<string> filter, List<ThingDef> products)
+    private static MultiCheckboxState StateOf(List<string> allowed, List<ThingDef> products)
     {
         bool anyOn = false;
         bool anyOff = false;
 
         for (int i = 0; i < products.Count; i++)
         {
-            if (ImplantSalvageStorage.Allows(filter, products[i]))
+            if (ImplantSalvageStorage.Allows(allowed, products[i]))
             {
                 anyOn = true;
             }
@@ -231,21 +232,21 @@ public static class ImplantTreeInStorage
     /// Push a change through the synced setter. Sends the whole allowed set rather than a delta so
     /// the message is self-contained and cannot half-apply on another client.
     /// </summary>
-    private static void Apply(string key, List<string> filter, List<ThingDef> changed, bool allow)
+    private static void Apply(string key, List<string> allowed, List<ThingDef> changed, bool allow)
     {
         HashSet<ThingDef> changing = new HashSet<ThingDef>(changed);
-        List<string> allowed = new List<string>();
+        List<string> newAllowed = new List<string>();
 
         foreach (ThingDef product in AllProducts())
         {
-            bool value = changing.Contains(product) ? allow : ImplantSalvageStorage.Allows(filter, product);
+            bool value = changing.Contains(product) ? allow : ImplantSalvageStorage.Allows(allowed, product);
             if (value)
             {
-                allowed.Add(product.defName);
+                newAllowed.Add(product.defName);
             }
         }
 
-        ImplantSalvageStorage.SetStorageImplantFilter(key, allowed);
+        ImplantSalvageStorage.SetStorageImplantFilter(key, newAllowed);
     }
 
     private static List<ThingDef> AllProducts() => ImplantSalvageUtility.AllImplantProducts();

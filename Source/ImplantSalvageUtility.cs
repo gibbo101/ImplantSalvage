@@ -8,12 +8,12 @@ namespace ImplantSalvage;
 
 /// <summary>
 /// Shared core: which implants a corpse holds, how likely a given surgeon is to wreck one, and
-/// the extraction itself. Deliberately the single place both slice 1 (the right-click job) and a
-/// future slice 2 (corpse Operations tab) call into.
+/// the extraction itself. The right-click order, the marked-corpse work queue, the storage filters
+/// and the corpse markers all read from here, so they cannot disagree about what an implant is.
 /// </summary>
 public static class ImplantSalvageUtility
 {
-    private const int MinWorkTicks = 600;
+    public const int MinWorkTicks = 600;
     private const int MaxWorkTicks = 2000;
 
     private static List<ThingDef> implantProductsCache;
@@ -61,7 +61,7 @@ public static class ImplantSalvageUtility
     /// uses - so a bionics mod's parts appear here with no support code and no per-mod patch.
     /// Cached: the def database does not change after startup.
     ///
-    /// UI only (the settings list). Never call this to drive game state.
+    /// UI only (the storage implant picker). Never call this to drive game state.
     /// </summary>
     public static List<ThingDef> AllImplantProducts()
     {
@@ -106,11 +106,7 @@ public static class ImplantSalvageUtility
     /// </summary>
     public static void IssueExtractJob(Pawn surgeon, Corpse corpse, Hediff implant)
     {
-        Job job = JobMaker.MakeJob(ImplantSalvageDefOf.Luke_ExtractImplant, corpse);
-
-        // Which implant. An int on the Job, because Multiplayer serialises the Job itself and the
-        // JobDriver does not exist yet at that point - so the data cannot live on the driver.
-        job.count = implant.loadID;
+        Job job = MakeExtractJob(corpse, implant);
 
         // Enemies who die outside the home area leave FORBIDDEN corpses, which is most raid
         // casualties. This is an explicit player order, so it ignores that, exactly as vanilla's
@@ -118,6 +114,18 @@ public static class ImplantSalvageUtility
         job.ignoreForbidden = true;
 
         surgeon.jobs.TryTakeOrderedJob(job, JobTag.Misc);
+    }
+
+    /// <summary>
+    /// An extraction job for one implant. The implant rides on the Job as its loadID in job.count,
+    /// because Multiplayer serialises the Job itself before any JobDriver exists - so the data
+    /// cannot live on the driver.
+    /// </summary>
+    public static Job MakeExtractJob(Corpse corpse, Hediff implant)
+    {
+        Job job = JobMaker.MakeJob(ImplantSalvageDefOf.Luke_ExtractImplant, corpse);
+        job.count = implant.loadID;
+        return job;
     }
 
     /// <summary>
@@ -146,7 +154,7 @@ public static class ImplantSalvageUtility
         foreach (Hediff hediff in ExtractableImplants(corpse))
         {
             ThingDef product = hediff.def.spawnThingOnRemoved;
-            if (product != null && product.BaseMarketValue > bestValue)
+            if (product.BaseMarketValue > bestValue)
             {
                 best = product;
                 bestValue = product.BaseMarketValue;
@@ -157,10 +165,9 @@ public static class ImplantSalvageUtility
     }
 
     /// <summary>
-    /// Re-find an implant by its scribed <see cref="Hediff.loadID"/>. The job carries the loadID
-    /// rather than a reference because Multiplayer serialises the Job before the JobDriver exists,
-    /// so the data has to live on the Job itself (as job.count).
-    /// Returns null if it has gone - another doctor may have got there first.
+    /// Re-find an implant by its scribed <see cref="Hediff.loadID"/>, as carried on the Job by
+    /// <see cref="MakeExtractJob"/>. Returns null if it has gone - another doctor may have got
+    /// there first.
     /// </summary>
     public static Hediff FindImplant(Corpse corpse, int loadID)
     {
@@ -194,8 +201,10 @@ public static class ImplantSalvageUtility
         GameComponent_ImplantSalvage rules = GameComponent_ImplantSalvage.Current;
         ImplantSalvageSettings settings = ImplantSalvageMod.Settings;
 
-        float maxDestroyChance = rules?.maxDestroyChance ?? settings?.maxDestroyChance ?? 0.5f;
-        float minDestroyChance = rules?.minDestroyChance ?? settings?.minDestroyChance ?? 0.02f;
+        float maxDestroyChance = rules?.maxDestroyChance ?? settings?.maxDestroyChance
+            ?? ImplantSalvageSettings.DefaultMaxDestroyChance;
+        float minDestroyChance = rules?.minDestroyChance ?? settings?.minDestroyChance
+            ?? ImplantSalvageSettings.DefaultMinDestroyChance;
 
         float stat = surgeon.GetStatValue(StatDefOf.MedicalSurgerySuccessChance);
         float chance = maxDestroyChance * (1f - Mathf.Clamp01(stat));
@@ -226,16 +235,19 @@ public static class ImplantSalvageUtility
     /// </summary>
     public static string CannotExtractReason(Pawn surgeon, Corpse corpse)
     {
+        string doctoring = WorkTypeDefOf.Doctor.gerundLabel;
+
         if (surgeon.WorkTypeIsDisabled(WorkTypeDefOf.Doctor))
         {
-            return "CannotPrioritizeWorkTypeDisabled".Translate(WorkTypeDefOf.Doctor.gerundLabel);
+            return "CannotPrioritizeWorkTypeDisabled".Translate(doctoring);
         }
 
         if (surgeon.workSettings == null || !surgeon.workSettings.WorkIsActive(WorkTypeDefOf.Doctor))
         {
-            return "CannotPrioritizeNotAssignedToWorkType".CanTranslate()
-                ? (string)"CannotPrioritizeNotAssignedToWorkType".Translate(WorkTypeDefOf.Doctor.gerundLabel)
-                : (string)"CannotPrioritizeWorkTypeDisabled".Translate(WorkTypeDefOf.Doctor.gerundLabel);
+            string key = "CannotPrioritizeNotAssignedToWorkType".CanTranslate()
+                ? "CannotPrioritizeNotAssignedToWorkType"
+                : "CannotPrioritizeWorkTypeDisabled";
+            return key.Translate(doctoring);
         }
 
         if (!surgeon.CanReserve(corpse))

@@ -8,8 +8,8 @@ namespace ImplantSalvage;
 /// <summary>
 /// Walk to the corpse, work on it, then pull out the one implant this job was issued for.
 ///
-/// TargetA is the corpse; job.count carries the implant's Hediff.loadID (see the provider for why
-/// it rides on the Job rather than on this driver).
+/// TargetA is the corpse; job.count carries the implant's Hediff.loadID (see
+/// ImplantSalvageUtility.MakeExtractJob for why it rides on the Job rather than on this driver).
 ///
 /// Multiplayer: everything that touches game state happens here, inside the simulation tick, so it
 /// runs identically on every client. The float menu only ever issues the job.
@@ -19,6 +19,9 @@ public class JobDriver_ExtractImplant : JobDriver
     private Corpse Corpse => job.targetA.Thing as Corpse;
 
     private int ImplantLoadID => job.count;
+
+    /// <summary>The implant this job was issued for, or null once it has gone.</summary>
+    private Hediff Implant => ImplantSalvageUtility.FindImplant(Corpse, ImplantLoadID);
 
     public override bool TryMakePreToilReservations(bool errorOnFailed)
     {
@@ -32,13 +35,15 @@ public class JobDriver_ExtractImplant : JobDriver
 
         // The implant can vanish mid-job - another doctor finished first, or the corpse was
         // butchered. Bail rather than extracting something the player did not pick.
-        this.FailOn(() => Corpse == null || ImplantSalvageUtility.FindImplant(Corpse, ImplantLoadID) == null);
+        this.FailOn(() => Implant == null);
 
         yield return Toils_Goto.GotoThing(TargetIndex.A, PathEndMode.ClosestTouch)
             .FailOnDespawnedNullOrForbidden(TargetIndex.A);
 
-        Hediff implantForWork = Corpse != null ? ImplantSalvageUtility.FindImplant(Corpse, ImplantLoadID) : null;
-        int workTicks = implantForWork != null ? ImplantSalvageUtility.WorkTicksFor(implantForWork) : 600;
+        Hediff implantForWork = Implant;
+        int workTicks = implantForWork != null
+            ? ImplantSalvageUtility.WorkTicksFor(implantForWork)
+            : ImplantSalvageUtility.MinWorkTicks;
 
         Toil work = Toils_General.Wait(workTicks, TargetIndex.A);
         work.WithProgressBarToilDelay(TargetIndex.A);
@@ -50,11 +55,6 @@ public class JobDriver_ExtractImplant : JobDriver
         yield return Toils_General.Do(delegate
         {
             Corpse corpse = Corpse;
-            if (corpse == null)
-            {
-                return;
-            }
-
             Hediff implant = ImplantSalvageUtility.FindImplant(corpse, ImplantLoadID);
             if (implant == null)
             {

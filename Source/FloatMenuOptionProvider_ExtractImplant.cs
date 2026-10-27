@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using RimWorld;
 using Verse;
-using Verse.AI;
 
 namespace ImplantSalvage;
 
@@ -43,11 +42,7 @@ public class FloatMenuOptionProvider_ExtractImplant : FloatMenuOptionProvider
             yield break;
         }
 
-        List<Hediff> implants = new List<Hediff>();
-        foreach (Hediff hediff in ImplantSalvageUtility.ExtractableImplants(corpse))
-        {
-            implants.Add(hediff);
-        }
+        List<Hediff> implants = new List<Hediff>(ImplantSalvageUtility.ExtractableImplants(corpse));
 
         // Nothing installed: no option at all, so the menu stays clean on ordinary corpses.
         if (implants.Count == 0)
@@ -70,7 +65,7 @@ public class FloatMenuOptionProvider_ExtractImplant : FloatMenuOptionProvider
         string submenuLabel = "Luke_ExtractImplantSubmenu".Translate();
         if (cannotReason != null)
         {
-            yield return new FloatMenuOption(submenuLabel + ": " + cannotReason, null);
+            yield return DisabledOption(submenuLabel, cannotReason);
             yield break;
         }
 
@@ -96,7 +91,7 @@ public class FloatMenuOptionProvider_ExtractImplant : FloatMenuOptionProvider
 
         if (cannotReason != null)
         {
-            return new FloatMenuOption(label + ": " + cannotReason, null);
+            return DisabledOption(label, cannotReason);
         }
 
         if (ImplantSalvageMod.Settings.showIntactChance)
@@ -111,5 +106,11 @@ public class FloatMenuOptionProvider_ExtractImplant : FloatMenuOptionProvider
         }, implant.def.spawnThingOnRemoved);
 
         return FloatMenuUtility.DecoratePrioritizedTask(option, surgeon, new LocalTargetInfo(corpse));
+    }
+
+    /// <summary>A greyed-out option that names why it cannot be taken, in vanilla's "label: reason" form.</summary>
+    private static FloatMenuOption DisabledOption(string label, string reason)
+    {
+        return new FloatMenuOption(label + ": " + reason, null);
     }
 }

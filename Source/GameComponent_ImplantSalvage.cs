@@ -12,17 +12,17 @@ namespace ImplantSalvage;
 /// every client read identical values by construction - a joining client loads the host's game and
 /// therefore the host's rules.
 ///
-/// ModSettings still exist and still matter; they are now the *defaults a new game starts with*,
-/// plus the purely visual options (the corpse marker, the intact-chance label) which never touch
-/// the simulation and are free to differ per player.
+/// ModSettings hold the *defaults a new game starts with*, plus the purely visual options (the
+/// corpse marker, the intact-chance label) which never touch the simulation and are free to differ
+/// per player.
 ///
 /// Auto-registers: Game.FillComponents() instantiates every non-abstract GameComponent subclass,
 /// the same way maps pick up MapComponents.
 /// </summary>
 public class GameComponent_ImplantSalvage : GameComponent
 {
-    public float maxDestroyChance = 0.5f;
-    public float minDestroyChance = 0.02f;
+    public float maxDestroyChance = ImplantSalvageSettings.DefaultMaxDestroyChance;
+    public float minDestroyChance = ImplantSalvageSettings.DefaultMinDestroyChance;
 
     /// <summary>
     /// False only on a game that has never run this mod. Seeding once, rather than every load,
@@ -34,7 +34,7 @@ public class GameComponent_ImplantSalvage : GameComponent
     /// <summary>
     /// Per-stockpile implant selections, keyed by their owner's stable save ID (see
     /// ImplantSalvageStorage.KeyFor). Absent key = never customised = no implant restriction, so
-    /// an untouched stockpile behaves exactly as it did before this mod.
+    /// an untouched stockpile behaves as it does in vanilla.
     ///
     /// Lives in the save rather than in ModSettings for the same reason the chances do: it decides
     /// what may be hauled where, which is simulation.
@@ -79,8 +79,8 @@ public class GameComponent_ImplantSalvage : GameComponent
     public override void ExposeData()
     {
         base.ExposeData();
-        Scribe_Values.Look(ref maxDestroyChance, "maxDestroyChance", 0.5f);
-        Scribe_Values.Look(ref minDestroyChance, "minDestroyChance", 0.02f);
+        Scribe_Values.Look(ref maxDestroyChance, "maxDestroyChance", ImplantSalvageSettings.DefaultMaxDestroyChance);
+        Scribe_Values.Look(ref minDestroyChance, "minDestroyChance", ImplantSalvageSettings.DefaultMinDestroyChance);
         Scribe_Values.Look(ref seeded, "seeded", defaultValue: false);
         Scribe_Collections.Look(ref storageImplantAllowed, "storageImplantAllowed",
             LookMode.Value, LookMode.Value);

@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using RimWorld;
-using UnityEngine;
 using Verse;
 
 namespace ImplantSalvage;
@@ -17,10 +16,9 @@ public static class HarmonyPatches
 }
 
 /// <summary>
-/// Records which storage the Storage tab is drawing, so the filter tree can tell whose implant
-/// selection it is editing. Listing_TreeThingFilter only knows its ThingFilter, and there is no
-/// reverse lookup from a filter to its owner - Multiplayer solves the same problem the same way
-/// (ThingFilterMarkers wraps this exact method).
+/// Records which storage the Storage tab is drawing in <see cref="StorageFilterContext"/>, so the
+/// filter tree can tell whose implant selection it is editing. Multiplayer's ThingFilterMarkers
+/// wraps this exact method for the same reason.
 ///
 /// A finalizer clears it rather than a plain postfix, so an exception thrown anywhere inside
 /// FillTab cannot leave a stale owner pinned for the next tab that draws.
@@ -42,6 +40,7 @@ public static class ITab_Storage_FillTab_Patch
     }
 }
 
+/// <summary>
 /// Injects the implant picker into the filter tree, directly beneath the "allow corpses with /
 /// without implants" pair - those two are its parent switch, so it belongs under them.
 ///

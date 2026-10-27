@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using RimWorld;
 using Verse;
 
 namespace ImplantSalvage;
@@ -31,27 +30,21 @@ public class PendingExtraction : IExposable
 /// <summary>
 /// The queue of extractions marked on corpses, and the designation that shows them.
 ///
-/// This replaces the earlier "send the nearest doctor right now" button. Vanilla's neighbours in
-/// that gizmo row - Strip, Extract skull - all work this way: you mark the body, it can be
-/// cancelled, and whichever doctor is free services it according to work priorities. Crucially it
-/// never yanks a drafted pawn out of a firefight, which the immediate version did.
+/// Works like its vanilla neighbours in the corpse gizmo row - Strip, Extract skull: you mark the
+/// body, the mark can be cancelled, and whichever doctor is free services it according to work
+/// priorities. A drafted pawn is never pulled out of a fight to do it.
 /// </summary>
 public static class ImplantSalvagePending
 {
-    public static List<PendingExtraction> All()
-    {
-        GameComponent_ImplantSalvage component = GameComponent_ImplantSalvage.Current;
-        return component?.pendingExtractions ?? new List<PendingExtraction>();
-    }
-
     public static PendingExtraction For(Corpse corpse)
     {
-        if (corpse == null)
+        GameComponent_ImplantSalvage component = GameComponent_ImplantSalvage.Current;
+        if (corpse == null || component == null)
         {
             return null;
         }
 
-        List<PendingExtraction> all = All();
+        List<PendingExtraction> all = component.pendingExtractions;
         PendingExtraction found = null;
         for (int i = 0; i < all.Count; i++)
         {
@@ -73,8 +66,7 @@ public static class ImplantSalvagePending
         if (corpse.Map != null &&
             corpse.Map.designationManager.DesignationOn(corpse, ImplantSalvageDefOf.Luke_ExtractImplantMark) == null)
         {
-            GameComponent_ImplantSalvage component = GameComponent_ImplantSalvage.Current;
-            component?.pendingExtractions.Remove(found);
+            all.Remove(found);
             return null;
         }
 
@@ -85,12 +77,6 @@ public static class ImplantSalvagePending
     {
         PendingExtraction pending = For(corpse);
         return pending != null && pending.implantLoadIDs.Contains(loadID);
-    }
-
-    public static bool AnyPending(Corpse corpse)
-    {
-        PendingExtraction pending = For(corpse);
-        return pending != null && pending.implantLoadIDs.Count > 0;
     }
 
     /// <summary>
@@ -147,7 +133,7 @@ public static class ImplantSalvagePending
         SyncDesignation(corpse, pending);
     }
 
-    /// <summary>Clear everything queued on a corpse - the Cancel button.</summary>
+    /// <summary>Clear everything queued on a corpse, removing its designation.</summary>
     public static void CancelAll(Corpse corpse)
     {
         GameComponent_ImplantSalvage component = GameComponent_ImplantSalvage.Current;

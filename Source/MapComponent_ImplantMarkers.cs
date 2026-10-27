@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using RimWorld;
 using RimWorld.Planet;
 using UnityEngine;
 using Verse;
@@ -45,9 +44,9 @@ public class MapComponent_ImplantMarkers : MapComponent
     /// away entirely. The MetaOverlays layer already starts at 14.268, which leaves 0.232 of
     /// headroom for the whole layer; vanilla's highest overlay uses 0.2195 of it.
     ///
-    /// An earlier version used 0.03658537f * 7 = 0.256 and was silently invisible: the markers
-    /// were built and drawn, and the near plane threw every one of them away. Do not raise this
-    /// without checking it against 14.5.
+    /// Anything past that headroom is built and drawn but silently discarded by the near plane
+    /// (0.03658537f * 7 = 0.256, for example, is already too high). Do not raise this without
+    /// checking it against 14.5.
     ///
     /// 15f/82f is the offset vanilla's own item-icon overlay uses
     /// (OverlayDrawer.RenderForbiddenRefuelOverlay), which is the closest analogue to this.
@@ -121,7 +120,6 @@ public class MapComponent_ImplantMarkers : MapComponent
             markedCorpses.Add(corpse);
             markedProducts.Add(product);
         }
-
     }
 
     private static void DrawMarker(Corpse corpse, ThingDef product)

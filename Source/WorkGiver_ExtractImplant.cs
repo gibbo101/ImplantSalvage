@@ -55,7 +55,7 @@ public class WorkGiver_ExtractImplant : WorkGiver_Scanner
         }
 
         // Everything queued may already be gone - another doctor got there first, or the part was
-        // destroyed. Leave the designation for the tidy-up in the JobDriver rather than churning.
+        // destroyed - in which case there is nothing to do here.
         if (ImplantSalvagePending.NextImplant(corpse) == null)
         {
             return false;
@@ -77,13 +77,6 @@ public class WorkGiver_ExtractImplant : WorkGiver_Scanner
         }
 
         Hediff implant = ImplantSalvagePending.NextImplant(corpse);
-        if (implant == null)
-        {
-            return null;
-        }
-
-        Job job = JobMaker.MakeJob(ImplantSalvageDefOf.Luke_ExtractImplant, corpse);
-        job.count = implant.loadID;
-        return job;
+        return implant != null ? ImplantSalvageUtility.MakeExtractJob(corpse, implant) : null;
     }
 }

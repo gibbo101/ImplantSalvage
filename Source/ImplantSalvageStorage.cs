@@ -47,19 +47,9 @@ public static class ImplantSalvageStorage
     /// </summary>
     public static List<string> AllowedFor(IStoreSettingsParent parent)
     {
-        if (parent == null)
-        {
-            return null;
-        }
-
         GameComponent_ImplantSalvage component = GameComponent_ImplantSalvage.Current;
-        if (component == null)
-        {
-            return null;
-        }
-
         string key = KeyFor(parent);
-        if (key == null)
+        if (component == null || key == null)
         {
             return null;
         }
@@ -83,8 +73,7 @@ public static class ImplantSalvageStorage
     {
         foreach (Hediff hediff in ImplantSalvageUtility.ExtractableImplants(corpse))
         {
-            ThingDef product = hediff.def.spawnThingOnRemoved;
-            if (product != null && Allows(allowed, product))
+            if (Allows(allowed, hediff.def.spawnThingOnRemoved))
             {
                 return true;
             }
@@ -92,34 +81,6 @@ public static class ImplantSalvageStorage
 
         return false;
     }
-
-    /// <summary>
-    /// Every corpse ThingDef, cached. Used to answer "could this storage ever hold a body?" without
-    /// walking the filter's whole allowed set - which for an everything-allowed stockpile is on the
-    /// order of a thousand defs, and the Storage tab would ask once per frame.
-    /// </summary>
-    public static List<ThingDef> AllCorpseDefs()
-    {
-        if (corpseDefsCache != null)
-        {
-            return corpseDefsCache;
-        }
-
-        List<ThingDef> corpses = new List<ThingDef>();
-        List<ThingDef> all = DefDatabase<ThingDef>.AllDefsListForReading;
-        for (int i = 0; i < all.Count; i++)
-        {
-            if (all[i].IsCorpse)
-            {
-                corpses.Add(all[i]);
-            }
-        }
-
-        corpseDefsCache = corpses;
-        return corpses;
-    }
-
-    private static List<ThingDef> corpseDefsCache;
 
     /// <summary>
     /// Apply a stockpile's implant selection. Synced: this decides what may be hauled where, so

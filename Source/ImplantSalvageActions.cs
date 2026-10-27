@@ -41,7 +41,9 @@ public static class ImplantSalvageActions
         ImplantSalvagePending.Toggle(corpse, implantLoadID);
     }
 
-    /// <summary>Clear every extraction queued on a corpse - the Cancel button.</summary>
+    /// <summary>
+    /// Clear every extraction queued on a corpse. Synced for the same reason as ToggleExtraction.
+    /// </summary>
     public static void CancelExtractions(Corpse corpse)
     {
         ImplantSalvagePending.CancelAll(corpse);
