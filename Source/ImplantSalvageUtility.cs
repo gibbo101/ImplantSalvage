@@ -13,8 +13,8 @@ namespace ImplantSalvage;
 /// </summary>
 public static class ImplantSalvageUtility
 {
-    public const int MinWorkTicks = 600;
-    private const int MaxWorkTicks = 2000;
+    public const int MinWorkAmount = 600;
+    private const int MaxWorkAmount = 2000;
 
     private static List<ThingDef> implantProductsCache;
 
@@ -221,11 +221,14 @@ public static class ImplantSalvageUtility
         return $"{hediff.LabelCap} ({hediff.Part.Label})";
     }
 
-    /// <summary>Pricier implants are fiddlier to get out. Clamped so it never becomes a slog.</summary>
-    public static int WorkTicksFor(Hediff hediff)
+    /// <summary>
+    /// Work needed to extract the implant: ticks at a surgery speed of 100%. Pricier implants are
+    /// fiddlier to get out, clamped so it never becomes a slog.
+    /// </summary>
+    public static int WorkAmountFor(Hediff hediff)
     {
         float marketValue = hediff.def.spawnThingOnRemoved?.BaseMarketValue ?? 0f;
-        return Mathf.RoundToInt(Mathf.Clamp(MinWorkTicks + marketValue * 0.35f, MinWorkTicks, MaxWorkTicks));
+        return Mathf.RoundToInt(Mathf.Clamp(MinWorkAmount + marketValue * 0.35f, MinWorkAmount, MaxWorkAmount));
     }
 
     /// <summary>

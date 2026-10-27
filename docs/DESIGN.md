@@ -174,7 +174,8 @@ operating table, no medicine consumed — the patient is dead, there is no infec
 This is the deliberate simplification that makes it feel like *salvage* rather than *surgery*.
 
 **Work amount:** scaled by implant value, ~`600` ticks base for a simple prosthetic up to
-~`2000` for archotech, modified by the surgeon's `WorkSpeedGlobal`. Interruptible/resumable.
+~`2000` for archotech, spent at the surgeon's `MedicalOperationSpeed` (vanilla's surgery-speed stat,
+which folds in `WorkSpeedGlobal`, Medicine skill, manipulation and sight). Interruptible/resumable.
 
 **Outcome roll:**
 

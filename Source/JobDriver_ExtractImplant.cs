@@ -23,6 +23,16 @@ public class JobDriver_ExtractImplant : JobDriver
     /// <summary>The implant this job was issued for, or null once it has gone.</summary>
     private Hediff Implant => ImplantSalvageUtility.FindImplant(Corpse, ImplantLoadID);
 
+    private float workLeft;
+    private float totalWork;
+
+    public override void ExposeData()
+    {
+        base.ExposeData();
+        Scribe_Values.Look(ref workLeft, "workLeft");
+        Scribe_Values.Look(ref totalWork, "totalWork");
+    }
+
     public override bool TryMakePreToilReservations(bool errorOnFailed)
     {
         // Reserving the corpse stops two doctors racing for the same body.
@@ -40,13 +50,27 @@ public class JobDriver_ExtractImplant : JobDriver
         yield return Toils_Goto.GotoThing(TargetIndex.A, PathEndMode.ClosestTouch)
             .FailOnDespawnedNullOrForbidden(TargetIndex.A);
 
-        Hediff implantForWork = Implant;
-        int workTicks = implantForWork != null
-            ? ImplantSalvageUtility.WorkTicksFor(implantForWork)
-            : ImplantSalvageUtility.MinWorkTicks;
-
-        Toil work = Toils_General.Wait(workTicks, TargetIndex.A);
-        work.WithProgressBarToilDelay(TargetIndex.A);
+        // Work is spent at the surgeon's surgery speed, as vanilla surgery spends a recipe's work:
+        // MedicalOperationSpeed folds in global work speed, Medicine skill, manipulation and sight.
+        Toil work = ToilMaker.MakeToil("ExtractImplant");
+        work.initAction = delegate
+        {
+            Hediff implant = Implant;
+            totalWork = implant != null
+                ? ImplantSalvageUtility.WorkAmountFor(implant)
+                : ImplantSalvageUtility.MinWorkAmount;
+            workLeft = totalWork;
+        };
+        work.tickIntervalAction = delegate(int delta)
+        {
+            workLeft -= pawn.GetStatValue(ImplantSalvageDefOf.MedicalOperationSpeed) * delta;
+            if (workLeft <= 0f)
+            {
+                ReadyForNextToil();
+            }
+        };
+        work.defaultCompleteMode = ToilCompleteMode.Never;
+        work.WithProgressBar(TargetIndex.A, () => 1f - workLeft / totalWork);
         work.WithEffect(EffecterDefOf.Surgery, TargetIndex.A);
         work.FailOnDespawnedNullOrForbidden(TargetIndex.A);
         work.activeSkill = () => SkillDefOf.Medicine;

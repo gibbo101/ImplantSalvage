@@ -13,6 +13,8 @@ public static class ImplantSalvageDefOf
     public static SpecialThingFilterDef Luke_AllowCorpsesWithImplants;
     public static SpecialThingFilterDef Luke_AllowCorpsesNoImplants;
 
+    public static StatDef MedicalOperationSpeed;
+
     static ImplantSalvageDefOf()
     {
         DefOfHelper.EnsureInitializedInCtor(typeof(ImplantSalvageDefOf));
