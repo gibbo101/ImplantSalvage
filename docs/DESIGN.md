@@ -192,11 +192,14 @@ With `maxDestroyChance = 0.50`, `minDestroyChance = 0.02` (both mod settings):
 The floor preserves vanilla's "no matter how high this stat is, there is always a small chance of
 failure" flavour.
 
-**On success:** spawn `hediff.def.spawnThingOnRemoved` at the surgeon's cell; remove the hediff;
-add `HediffDefOf.MissingBodyPart` for that `BodyPartRecord` so the corpse visibly loses the part
-and cannot be double-extracted. Grant Medicine XP (small — it is a corpse, not a patient).
+**On success:** spawn `hediff.def.spawnThingOnRemoved` at the surgeon's cell and remove the hediff.
+What happens to the body part follows vanilla removal: a **replacement part** (`Hediff_AddedPart`,
+e.g. a bionic arm) leaves `HediffDefOf.MissingBodyPart` behind, as `Recipe_RemoveBodyPart` does; an
+**implant installed into a part** (death acidifier in the torso, anything in the brain) only loses the
+hediff, as `Recipe_RemoveImplant` does, and the part stays. Marking an implant's host part missing
+destroyed the torso and every implant in it. Grant Medicine XP (small — it is a corpse, not a patient).
 
-**On failure:** remove the hediff and add `MissingBodyPart` as above, but spawn nothing. The
+**On failure:** remove the hediff and treat the part as above, but spawn nothing. The
 implant is destroyed. **Decided** — the "spawn it damaged instead" alternative is a fake
 consequence: `Recipe_InstallArtificialBodyPart.ApplyOnPawn` ends with
 `pawn.health.AddHediff(recipe.addsHediff, part)`, building the installed hediff purely from the

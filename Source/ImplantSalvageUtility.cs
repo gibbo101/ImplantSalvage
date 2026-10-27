@@ -255,8 +255,10 @@ public static class ImplantSalvageUtility
     /// Apply the extraction. Called from the JobDriver's finish action - i.e. inside the simulation
     /// tick, on every Multiplayer client - never from UI code.
     ///
-    /// Success spawns the implant; failure destroys it. Either way the hediff is replaced with a
-    /// missing part, so the corpse visibly loses it and cannot be extracted twice.
+    /// Success spawns the implant; failure destroys it. Either way the hediff is removed. A
+    /// replacement part (bionic arm) leaves the part missing, as vanilla's part removal does; an
+    /// implant installed into a part (death acidifier, brain implants) leaves the part intact, as
+    /// vanilla's implant removal does.
     ///
     /// No thoughts, no HistoryEvents, no Ideology interaction: this is scavenging hardware, not
     /// organ harvesting.
@@ -282,7 +284,7 @@ public static class ImplantSalvageUtility
         }
 
         inner.health.RemoveHediff(implant);
-        if (!inner.health.hediffSet.PartIsMissing(part))
+        if (implant is Hediff_AddedPart && !inner.health.hediffSet.PartIsMissing(part))
         {
             inner.health.AddHediff(HediffDefOf.MissingBodyPart, part);
         }
